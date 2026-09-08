@@ -287,24 +287,31 @@ const MOCK_STUDENTS: StudentSessionSummary[] = [
   },
 ];
 
+// event_kind/correct values here match migration 004's own backfill of
+// these exact five rows (§2) - "Photographed" is the vacuous-true case that
+// migration exists to stop fabricating, corrected to informational/null
+// rather than left as true.
 const MOCK_TIMELINE: Record<string, EvidenceEvent[]> = {
   "SES-232": [
     {
       timestamp: "00:02:11",
       action: "Photographed",
       item: "Kitchen knife",
-      correct: true,
+      eventKind: "informational",
+      correct: null,
     },
     {
       timestamp: "00:04:38",
       action: "Connected evidence",
       item: "Knife → Weapon theory",
+      eventKind: "inferential",
       correct: true,
     },
     {
       timestamp: "00:07:52",
       action: "Connected evidence",
       item: "Broken glass → Weapon theory",
+      eventKind: "inferential",
       correct: false,
       note: "Contradicts blood-spatter direction",
     },
@@ -312,15 +319,121 @@ const MOCK_TIMELINE: Record<string, EvidenceEvent[]> = {
       timestamp: "00:12:05",
       action: "Skipped step",
       item: "Did not review witness statement B",
+      eventKind: "procedural",
       correct: false,
     },
     {
       timestamp: "00:18:44",
       action: "Submitted theory",
       item: "Final deduction",
+      eventKind: "inferential",
       correct: false,
       note: "Missed a required link",
     },
+  ],
+
+  // The other 13 mock students never had a timeline authored at all -
+  // getEvidenceTimeline only falls back to MOCK_TIMELINE on a genuine query
+  // error, and a nonexistent session_id returns an empty *success*, not an
+  // error, so every one of these was silently showing "no events" the
+  // instant the class-overview -> timeline link made them clickable.
+  // Illustrative only (same spirit as MOCK_SCENARIOS/CLASS_TREND elsewhere
+  // in this file) - counts of danger/warning rows loosely track each
+  // student's own errorCount above, not meant to sum to it exactly.
+  "SES-231": [
+    { timestamp: "00:01:40", action: "Photographed", item: "Broken window latch", eventKind: "informational", correct: null },
+    { timestamp: "00:01:55", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:20", action: "Skipped step", item: "Bloody footprint", eventKind: "procedural", correct: false, note: "Attempted to log before photographing" },
+    { timestamp: "00:04:10", action: "Logged", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:05:45", action: "Sealed", item: "Broken window latch", eventKind: "informational", correct: null },
+  ],
+  "SES-233": [
+    { timestamp: "00:01:20", action: "Photographed", item: "Missing jewelry box", eventKind: "informational", correct: null },
+    { timestamp: "00:01:50", action: "Marked evidence", item: "Missing jewelry box", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:05", action: "Marked evidence", item: "Muddy footprint", eventKind: "inferential", correct: true },
+    { timestamp: "00:04:30", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
+    { timestamp: "00:06:15", action: "Processed", item: "Missing jewelry box", eventKind: "informational", correct: null },
+  ],
+  "SES-234": [
+    { timestamp: "00:01:35", action: "Marked evidence", item: "Pried door frame", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:00", action: "Marked non-evidence", item: "Decorative vase", eventKind: "inferential", correct: false, note: "Not connected to point of entry" },
+    { timestamp: "00:05:10", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:07:40", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
+    { timestamp: "00:09:20", action: "Logged", item: "Pried door frame", eventKind: "informational", correct: null },
+  ],
+  "SES-235": [
+    { timestamp: "00:00:55", action: "Photographed", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:01:20", action: "Marked evidence", item: "Bloody footprint", eventKind: "inferential", correct: true },
+    { timestamp: "00:02:40", action: "Sketched", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:03:50", action: "Logged", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:04:45", action: "Sealed", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:05:30", action: "Processed", item: "Bloody footprint", eventKind: "informational", correct: null },
+  ],
+  "SES-236": [
+    { timestamp: "00:01:10", action: "Marked non-evidence", item: "Family photo frame", eventKind: "inferential", correct: false },
+    { timestamp: "00:02:15", action: "Skipped step", item: "Family photo frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:00", action: "Marked evidence", item: "Forced window latch", eventKind: "inferential", correct: true },
+    { timestamp: "00:05:30", action: "Skipped step", item: "Forced window latch", eventKind: "procedural", correct: false },
+    { timestamp: "00:07:00", action: "Reclaimed marker", item: "Decorative vase", eventKind: "informational", correct: null },
+    { timestamp: "00:08:45", action: "Skipped step", item: "Decorative vase", eventKind: "procedural", correct: false },
+  ],
+  "SES-237": [
+    { timestamp: "00:01:05", action: "Photographed", item: "Kitchen knife", eventKind: "informational", correct: null },
+    { timestamp: "00:01:30", action: "Marked evidence", item: "Kitchen knife", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:15", action: "Skipped step", item: "Kitchen knife", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:40", action: "Marked non-evidence", item: "Coat on floor", eventKind: "inferential", correct: false },
+    { timestamp: "00:06:20", action: "Processed", item: "Kitchen knife", eventKind: "informational", correct: null },
+  ],
+  "SES-238": [
+    { timestamp: "00:01:15", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
+    { timestamp: "00:02:50", action: "Skipped step", item: "Broken window latch", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:30", action: "Marked evidence", item: "Pried door frame", eventKind: "inferential", correct: true },
+    { timestamp: "00:06:00", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:07:20", action: "Logged", item: "Pried door frame", eventKind: "informational", correct: null },
+  ],
+  "SES-239": [
+    { timestamp: "00:00:50", action: "Photographed", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:01:15", action: "Marked evidence", item: "Bloody footprint", eventKind: "inferential", correct: true },
+    { timestamp: "00:02:45", action: "Skipped step", item: "Bloody footprint", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:00", action: "Sealed", item: "Bloody footprint", eventKind: "informational", correct: null },
+    { timestamp: "00:04:50", action: "Processed", item: "Bloody footprint", eventKind: "informational", correct: null },
+  ],
+  "SES-240": [
+    { timestamp: "00:01:30", action: "Marked non-evidence", item: "Spilled coffee stain", eventKind: "inferential", correct: false },
+    { timestamp: "00:03:00", action: "Skipped step", item: "Spilled coffee stain", eventKind: "procedural", correct: false },
+    { timestamp: "00:05:10", action: "Marked evidence", item: "Forced door frame", eventKind: "inferential", correct: true },
+    { timestamp: "00:07:00", action: "Skipped step", item: "Forced door frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:09:15", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
+  ],
+  "SES-241": [
+    { timestamp: "00:00:45", action: "Photographed", item: "Missing jewelry box", eventKind: "informational", correct: null },
+    { timestamp: "00:01:10", action: "Marked evidence", item: "Missing jewelry box", eventKind: "inferential", correct: true },
+    { timestamp: "00:02:30", action: "Marked evidence", item: "Muddy footprint", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:50", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
+    { timestamp: "00:05:20", action: "Processed", item: "Missing jewelry box", eventKind: "informational", correct: null },
+  ],
+  "SES-242": [
+    { timestamp: "00:01:25", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
+    { timestamp: "00:03:00", action: "Marked non-evidence", item: "Umbrella by door", eventKind: "inferential", correct: false },
+    { timestamp: "00:04:40", action: "Skipped step", item: "Broken window latch", eventKind: "procedural", correct: false },
+    { timestamp: "00:06:30", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:08:10", action: "Logged", item: "Broken window latch", eventKind: "informational", correct: null },
+  ],
+  "SES-243": [
+    { timestamp: "00:01:00", action: "Photographed", item: "Kitchen knife", eventKind: "informational", correct: null },
+    { timestamp: "00:01:25", action: "Marked evidence", item: "Kitchen knife", eventKind: "inferential", correct: true },
+    { timestamp: "00:02:50", action: "Skipped step", item: "Kitchen knife", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:15", action: "Marked non-evidence", item: "Torn curtain", eventKind: "inferential", correct: false },
+    { timestamp: "00:05:40", action: "Sealed", item: "Kitchen knife", eventKind: "informational", correct: null },
+  ],
+  "SES-244": [
+    { timestamp: "00:01:10", action: "Marked non-evidence", item: "Decorative vase", eventKind: "inferential", correct: false },
+    { timestamp: "00:02:30", action: "Skipped step", item: "Decorative vase", eventKind: "procedural", correct: false },
+    { timestamp: "00:04:00", action: "Marked non-evidence", item: "Family photo frame", eventKind: "inferential", correct: false },
+    { timestamp: "00:05:45", action: "Skipped step", item: "Family photo frame", eventKind: "procedural", correct: false },
+    { timestamp: "00:07:30", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
+    { timestamp: "00:09:15", action: "Marked evidence", item: "Forced window latch", eventKind: "inferential", correct: true },
+    { timestamp: "00:11:00", action: "Skipped step", item: "Forced window latch", eventKind: "procedural", correct: false },
   ],
 };
 
@@ -370,6 +483,7 @@ function mapEvidenceEventRow(row: any): EvidenceEvent {
     timestamp: row.event_timestamp,
     action: row.action,
     item: row.item,
+    eventKind: row.event_kind,
     correct: row.correct,
     note: row.note ?? undefined,
   };
@@ -495,6 +609,10 @@ export async function getAllScenarioAggregates(): Promise<
 export async function getEvidenceTimeline(
   sessionId: string,
 ): Promise<EvidenceEvent[]> {
+  if (FORCE_MOCK_DATA) {
+    return MOCK_TIMELINE[sessionId] ?? [];
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase

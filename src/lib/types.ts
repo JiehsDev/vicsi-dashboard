@@ -2,8 +2,6 @@
 
 export type Role = "Photographer" | "IOC";
 
-export type StudentStatus = "flagged" | "onTrack" | "strong";
-
 /** Mirrors the `student_session_summary` SQL view */
 export interface StudentSessionSummary {
   id: string; // e.g. "STU-0231"
@@ -12,8 +10,17 @@ export interface StudentSessionSummary {
   section?: string; // e.g. "A" — optional until the view backs it
   scenarioId: string;
   scenarioName: string;
-  accuracy: number; // deduction accuracy, 0-100
-  compliance: number; // procedural compliance, 0-100
+  /** Deduction accuracy, 0-100, or null if it cannot yet be computed - no
+   *  agreed formula exists yet for collapsing the offline scorer's separate
+   *  metrics (criticalRecall, relevantRecall, precision, distractorFallRate)
+   *  into this one number. Genuinely nullable at the DB level (see
+   *  supabase/migrations/004_evidence_events_correctness_and_missing_ddl.sql
+   *  §3) and the mapper passes that through as-is - render null as an
+   *  honest "not available" state, never as 0. */
+  accuracy: number | null;
+  /** Procedural compliance, 0-100, or null - same nullability and reasoning
+   *  as accuracy above. */
+  compliance: number | null;
   /** % of required scenario steps completed, 0-100. Optional — the live
    *  `student_session_summary` table doesn't have a `completion_pct`
    *  column yet (verified against the real DB), so real rows omit it
@@ -38,12 +45,22 @@ export interface ScenarioAggregate {
   errorFrequency: number;
 }
 
+/** Which of three incompatible jobs a row's correctness dimension is doing -
+ *  see supabase/migrations/004_evidence_events_correctness_and_missing_ddl.sql
+ *  §2 for why this replaced inferring the distinction from `action` text. */
+export type EvidenceEventKind = "procedural" | "inferential" | "informational";
+
 /** One row from the `evidence_events` table, filtered by session_id */
 export interface EvidenceEvent {
   timestamp: string; // "00:02:11" elapsed, or ISO string from DB
   action: string; // e.g. "Photographed", "Connected evidence"
   item: string; // e.g. "Kitchen knife"
-  correct: boolean;
+  eventKind: EvidenceEventKind;
+  /** null for `informational` rows - a routine milestone (e.g.
+   *  "Photographed") has no correctness dimension at all, and forcing a
+   *  boolean there was the vacuous-true bug §2 of migration 004 fixed.
+   *  Render null as neutral, never as a fabricated true/false. */
+  correct: boolean | null;
   note?: string; // optional explanation when correct === false
 }
 
@@ -71,14 +88,4 @@ export interface ExpertBenchmark {
 export interface ErrorLogEntry {
   label: string;
   occurrences: number;
-}
-
-/** Simple, tunable threshold logic — kept in one place so it's a one-line
- *  change once real pilot data tells you what "flagged" should mean. */
-export function statusOf(
-  s: Pick<StudentSessionSummary, "accuracy" | "compliance">,
-): StudentStatus {
-  if (s.accuracy < 65 || s.compliance < 70) return "flagged";
-  if (s.accuracy >= 90 && s.compliance >= 90) return "strong";
-  return "onTrack";
 }

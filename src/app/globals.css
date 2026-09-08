@@ -13,6 +13,10 @@
   --primary: #e2542e;
   --critical: #e2542e;
   --good: #2f6b4f;
+  /* Amber, for a procedural violation - distinct from --critical (a wrong
+     identification) so the two failure kinds this app tracks stay visually
+     distinguishable, not both rendered as the same red. */
+  --warning: #b8790a;
 }
 
 @theme inline {
@@ -28,6 +32,7 @@
   --color-primary: var(--primary);
   --color-critical: var(--critical);
   --color-good: var(--good);
+  --color-warning: var(--warning);
 
   --font-sans: var(--font-inter);
 }

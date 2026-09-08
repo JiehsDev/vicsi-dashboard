@@ -18,6 +18,18 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+// Mirrors src/lib/studentAuth.ts's studentIdToEmail() exactly. Duplicated
+// rather than imported because this script runs via plain `node` (see the
+// seed:accounts script in package.json) with no TypeScript loader — it
+// cannot import a .ts file. If studentIdToEmail() or STUDENT_EMAIL_DOMAIN
+// ever changes there, this must change too, or a seeded student account's
+// auth email will stop matching what the real login form derives from a
+// typed Student ID.
+const STUDENT_EMAIL_DOMAIN = "students.traceboard.internal";
+function studentIdToEmail(studentId) {
+  return `${studentId.trim().toLowerCase()}@${STUDENT_EMAIL_DOMAIN}`;
+}
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -60,7 +72,12 @@ const ACCOUNTS = [
   },
   {
     kind: "student",
-    email: process.env.SEED_STUDENT_EMAIL ?? "student@psu.edu.ph",
+    // The auth email MUST be studentIdToEmail(studentId), not an arbitrary
+    // literal address - the login form translates a typed Student ID via
+    // that same function (see src/app/login/actions.ts), so a student
+    // account seeded under any other email could never be signed into via
+    // Student ID, only via an email real students are never given.
+    email: studentIdToEmail(process.env.SEED_STUDENT_ID ?? "2021-04521"),
     password: process.env.SEED_STUDENT_PASSWORD ?? "traceboard-dev-1",
     profile: {
       role: "student",
@@ -149,12 +166,17 @@ try {
 console.log("\n  Sign in at /login with:\n");
 for (const r of results) {
   console.log(`    ${r.kind}`);
-  console.log(`      email     ${r.email}`);
-  console.log(`      password  ${r.password}`);
+  // Students sign in with their Student ID, not the synthesized internal
+  // email (login/actions.ts derives that same address from the ID typed
+  // into the identifier field) - printing the email here would suggest an
+  // address no real student is ever given.
   if (r.profile.student_id) {
     console.log(`      studentId ${r.profile.student_id}`);
     console.log(`      game PIN  ${r.profile.pin}`);
+  } else {
+    console.log(`      email     ${r.email}`);
   }
+  console.log(`      password  ${r.password}`);
   console.log("");
 }
 console.log(
