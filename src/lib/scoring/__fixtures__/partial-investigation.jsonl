@@ -1,0 +1,17 @@
+{"sessionId":"fixture-partial-investigation","sequenceNumber":0,"timestampMs":1000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"Found"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":1,"timestampMs":2000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"PhotographedRaw"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":2,"timestampMs":3000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"ChalkMarked"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":3,"timestampMs":4000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"Marked"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":4,"timestampMs":5000,"eventType":"EvidenceStatusChanged","targetId":"EVD-015","payload":[{"key":"status","value":"Found"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":5,"timestampMs":6000,"eventType":"EvidenceStatusChanged","targetId":"EVD-015","payload":[{"key":"status","value":"PhotographedRaw"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":6,"timestampMs":7000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Found"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":7,"timestampMs":8000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"PhotographedRaw"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":8,"timestampMs":9000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"ChalkMarked"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":9,"timestampMs":10000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Marked"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":10,"timestampMs":11000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"PhotographedFinal"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":11,"timestampMs":12000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Logged"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":12,"timestampMs":13000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"ReadyForCollection"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":13,"timestampMs":14000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Collected"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":14,"timestampMs":15000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Sealed"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":15,"timestampMs":16000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Processed"}]}
+{"sessionId":"fixture-partial-investigation","sequenceNumber":16,"timestampMs":17000,"eventType":"HypothesisSubmitted","targetId":"HYP-02","payload":[{"key":"selectedOptionId","value":"opt-impact"},{"key":"reasoningOptionId","value":"hyp02-blood-spatter-impact"}]}

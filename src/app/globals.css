@@ -7,10 +7,35 @@
   --border: #e7e3db;
 
   --ink: #181815;
-  --ink-muted: #78766f;
-  --ink-subtle: #a19e95;
+  /* Darkened from #78766f (WCAG contrast 4.1:1 on --surface-tint, below the
+     4.5:1 AA text threshold - found via an automated axe-core scan and
+     confirmed against every light background this token is used on: 4.68:1
+     on --surface-tint, 5.18:1 on --surface, 4.59:1 on --bg). Same hue, just
+     deep enough to pass on every background it actually appears against. */
+  --ink-muted: #6f6d66;
+  /* Darkened from #a19e95 (WCAG contrast 2.68:1 on white - well below the
+     4.5:1 AA threshold, found via axe-core on several real hint/caption
+     sentences using this token at 11.5px, not merely decorative dividers).
+     Ends up close to --ink-muted's own new value - there is very little
+     room left between "just clears 4.5:1" and "clearly lighter than
+     --ink-muted" once every background this token appears against
+     (--surface, --surface-tint, --bg) has to pass; picked the darkest of
+     the two constraints rather than leave a name that no longer reads
+     lighter than --ink-muted in practice on any real background. 5.16:1 on
+     --surface, 4.66:1 on --surface-tint, 4.57:1 on --bg. */
+  --ink-subtle: #706d66;
 
-  --primary: #e2542e;
+  /* Darkened from #e2542e (WCAG contrast 3.79:1 both as button text-on-fill
+     and as link text-on-surface - below the 4.5:1 AA threshold, found via
+     axe-core). First pass (#c94a29) cleared white (4.67:1) but was still
+     short against --surface-tint (4.22:1, the next background this token
+     appears as a link against) - re-checked against every actual
+     background this token renders on, not just one. 5.36:1 on white,
+     4.84:1 on --surface-tint, 4.75:1 on --bg. --critical is intentionally
+     left at the original value - the axe scan only flagged --primary's own
+     button/link usages, not a --critical element, so only what testing
+     actually proved is changed. */
+  --primary: #bb4224;
   --critical: #e2542e;
   --good: #2f6b4f;
   /* Amber, for a procedural violation - distinct from --critical (a wrong

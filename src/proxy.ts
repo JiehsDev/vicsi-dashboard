@@ -43,8 +43,17 @@ export async function proxy(request: NextRequest) {
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
   const isSignupPage = request.nextUrl.pathname === "/signup";
+  // /api/v1/** routes are NEVER gated here - Unity's device-pairings/exchange
+  // and assessment-sessions endpoints authenticate via a pairing code or a
+  // bearer assessment token (never a Supabase session cookie, since Unity
+  // has no browser/cookie jar), and /api/v1/health is intentionally
+  // unauthenticated. Each Route Handler enforces its own auth internally
+  // (see e.g. pairing-codes/route.ts's own supabase.auth.getUser() call for
+  // the one endpoint that DOES need a signed-in dashboard user) - redirecting
+  // any of these to /login here would break every non-browser caller.
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
 
-  if (!user && !isLoginPage && !isSignupPage) {
+  if (!user && !isLoginPage && !isSignupPage && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

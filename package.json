@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:accounts": "node --env-file=.env.local supabase/seed/seed-accounts.mjs"
+    "seed:accounts": "node --env-file=.env.local supabase/seed/seed-accounts.mjs",
+    "test:crypto": "node --conditions=react-server --experimental-strip-types --test src/lib/__tests__/assessmentCrypto.test.ts",
+    "test:scoring": "node --conditions=react-server --experimental-strip-types --test src/lib/scoring/__tests__/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

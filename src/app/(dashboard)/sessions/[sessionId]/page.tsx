@@ -1,39 +1,14 @@
 // src/app/(dashboard)/sessions/[sessionId]/page.tsx
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { EvidenceTimeline } from "@/components/EvidenceTimeline";
-import { getEvidenceTimeline } from "@/lib/supabaseClient";
+//
+// Legacy evidence-timeline page - superseded by /class-results/[sessionId]
+// (which now shows the same ordered event timeline, sourced from the real
+// session_events table). Kept as a redirect rather than deleted so an old
+// bookmark still resolves - but there is no reliable id mapping from a
+// legacy evidence_events session_id (an arbitrary string like "SES-231")
+// to a real assessment_sessions.session_id (a Unity-issued GUID), so this
+// can only redirect to the results list, not to the specific session.
+import { redirect } from "next/navigation";
 
-export default async function SessionTimelinePage({
-  params,
-}: {
-  params: Promise<{ sessionId: string }>;
-}) {
-  const { sessionId } = await params;
-  const events = await getEvidenceTimeline(sessionId);
-
-  return (
-    <div>
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink"
-        >
-          <ArrowLeft size={14} />
-          Back to overview
-        </Link>
-        <div className="mt-3 text-[11px] font-bold uppercase tracking-wide text-primary">
-          Session Timeline
-        </div>
-        <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">
-          Evidence event log
-        </h1>
-        <p className="mt-1 break-all text-[13px] text-ink-muted">
-          Session <span className="font-mono">{sessionId}</span>
-        </p>
-      </div>
-
-      <EvidenceTimeline events={events} />
-    </div>
-  );
+export default async function LegacySessionTimelineRedirect() {
+  redirect("/class-results");
 }

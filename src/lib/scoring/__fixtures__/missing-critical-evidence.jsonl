@@ -1,0 +1,11 @@
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":0,"timestampMs":1000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Found"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":1,"timestampMs":2000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"PhotographedRaw"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":2,"timestampMs":3000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"ChalkMarked"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":3,"timestampMs":4000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Marked"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":4,"timestampMs":5000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"PhotographedFinal"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":5,"timestampMs":6000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Logged"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":6,"timestampMs":7000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"ReadyForCollection"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":7,"timestampMs":8000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Collected"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":8,"timestampMs":9000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Sealed"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":9,"timestampMs":10000,"eventType":"EvidenceStatusChanged","targetId":"EVD-017","payload":[{"key":"status","value":"Processed"}]}
+{"sessionId":"fixture-missing-critical-evidence","sequenceNumber":10,"timestampMs":11000,"eventType":"ReportLinesSelected","targetId":"EVD-017","payload":[{"key":"lineIds","value":"phone-screen-down-position,phone-ownership-established"}]}

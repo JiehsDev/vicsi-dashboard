@@ -46,9 +46,9 @@ export default async function SignupPage({
             <div className="text-[11px] font-bold uppercase tracking-wide text-primary">
               Student sign up
             </div>
-            <div className="mb-1 mt-1 text-[22px] font-bold text-ink">
+            <h1 className="mb-1 mt-1 text-[22px] font-bold text-ink">
               Create your account
-            </div>
+            </h1>
             <div className="mb-8 text-[13.5px] text-ink-muted">
               This account is for students only — instructor accounts are
               set up separately.

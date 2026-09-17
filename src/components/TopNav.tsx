@@ -3,13 +3,13 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { LogOut, Search } from "lucide-react";
 
-// No tab list here on purpose: Class Overview is currently the only screen
-// that exists past auth (see Part 2 of the task this was built under —
-// student detail / scenario diagnostics / session replay are separate,
-// later work). A row of tabs where only one link actually goes anywhere
-// would read as broken, not as "more is coming".
+// Two real destinations: Results (/class-results - reporting/analytics) and
+// Classes (/classes - create/edit/archive classes, manage enrollment). The
+// legacy "Class Overview" tab that used to point at "/" is gone - "/" is now
+// just a redirect to /class-results, so it never got its own tab back.
 export function TopNav({
   userEmail,
   onSignOut,
@@ -51,9 +51,17 @@ export function TopNav({
             </div>
           </div>
 
-          <div className="hidden text-[13px] text-ink-muted md:block">
-            Partido State University — Lagonoy Campus · Criminology Dept.
-          </div>
+          <nav className="flex items-center gap-4 text-[13px] font-medium">
+            <Link href="/class-results" className={pathname.startsWith("/class-results") ? "text-ink" : "text-ink-muted hover:text-ink"}>
+              Results
+            </Link>
+            <Link href="/classes" className={pathname.startsWith("/classes") ? "text-ink" : "text-ink-muted hover:text-ink"}>
+              Classes
+            </Link>
+            <Link href="/assignments" className={pathname.startsWith("/assignments") ? "text-ink" : "text-ink-muted hover:text-ink"}>
+              Assignments
+            </Link>
+          </nav>
 
           <div className="flex items-center gap-3">
             <div className="relative">

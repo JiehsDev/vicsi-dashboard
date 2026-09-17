@@ -1,0 +1,2 @@
+{"sessionId":"fixture-premature-submission","sequenceNumber":0,"timestampMs":1000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"Found"}]}
+{"sessionId":"fixture-premature-submission","sequenceNumber":1,"timestampMs":2000,"eventType":"EvidenceStatusChanged","targetId":"EVD-014","payload":[{"key":"status","value":"PhotographedRaw"}]}

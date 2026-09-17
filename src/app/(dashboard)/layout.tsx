@@ -1,5 +1,6 @@
 // src/app/(dashboard)/layout.tsx
 import { Suspense } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { signOut } from "@/app/login/actions";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
@@ -36,13 +37,25 @@ export default async function DashboardLayout({
             TRACEBOARD
           </div>
           <p className="mt-3 text-[13.5px] leading-relaxed text-ink-muted">
-            The student view isn&apos;t built yet — only the instructor
-            dashboard exists right now.
+            The student analytics view isn&apos;t built yet — but you can
+            pair your headset to start a session.
           </p>
-          <form action={signOut} className="mt-8">
+          <Link
+            href="/pairing"
+            className="mt-8 block w-full rounded-full bg-primary py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
+          >
+            Pair headset
+          </Link>
+          <Link
+            href="/results"
+            className="mt-3 block w-full rounded-full border border-border py-3.5 text-[14px] font-semibold text-ink-muted transition-colors hover:text-ink active:scale-[0.98]"
+          >
+            View my results
+          </Link>
+          <form action={signOut} className="mt-3">
             <button
               type="submit"
-              className="w-full rounded-full bg-primary py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
+              className="w-full rounded-full border border-border py-3.5 text-[14px] font-semibold text-ink-muted transition-colors hover:text-ink active:scale-[0.98]"
             >
               Sign out
             </button>
@@ -57,9 +70,9 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <TopNav userEmail={userEmail} onSignOut={signOut} />
       </Suspense>
-      <div className="mx-auto max-w-[1220px] px-6 pb-16 pt-8 sm:px-10">
+      <main className="mx-auto max-w-[1220px] px-6 pb-16 pt-8 sm:px-10">
         {children}
-      </div>
+      </main>
     </div>
   );
 }

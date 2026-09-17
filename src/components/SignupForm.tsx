@@ -114,7 +114,7 @@ export function SignupForm({ error }: { error?: string }) {
       </div>
       {passwordsMismatch && (
         <div className="-mt-2 text-[12px] text-critical">
-          Passwords don't match.
+          Passwords don&apos;t match.
         </div>
       )}
 
@@ -124,7 +124,7 @@ export function SignupForm({ error }: { error?: string }) {
           4-digit game PIN
         </div>
         <p className="mt-1 mb-3 text-[12px] leading-relaxed text-ink-muted">
-          This is what you'll type on the VR headset — your Student ID and
+          This is what you&apos;ll type on the VR headset — your Student ID and
           this PIN log you into the game. Keep it different from your
           password.
         </p>

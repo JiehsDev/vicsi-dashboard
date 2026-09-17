@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +43,11 @@ next-env.d.ts
 
 #local
 .env.local
+
+# database snapshots taken before applying migrations - may contain real row
+# data, never source-controlled
+/supabase/backups/
+
+# dev-only browser UI/accessibility test output (screenshots, scan reports) -
+# development-only visual evidence, never source-controlled
+/test-output/

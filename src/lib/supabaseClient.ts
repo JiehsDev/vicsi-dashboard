@@ -4,442 +4,31 @@ import type {
   StudentSessionSummary,
   ScenarioAggregate,
   EvidenceEvent,
+  EvidenceEventKind,
   ErrorLogEntry,
   Profile,
+  Role,
 } from "./types";
-
-/** Dev-only escape hatch: when set, `getStudentSessionSummaries()` skips the
- *  live query entirely and always returns the mock roster below. The live
- *  `student_session_summary` view currently holds pre-existing placeholder
- *  rows that predate real accounts and have no `section` column (see
- *  BUSINESS_RULES.md §8.2), so a real query succeeding doesn't mean the
- *  mock fallback ever gets exercised. This flag is the only way to actually
- *  see the Class List page grouped by section today. Server-only — do NOT
- *  prefix with NEXT_PUBLIC_. Set `FORCE_MOCK_DATA=1` in `.env.local`. */
-const FORCE_MOCK_DATA = process.env.FORCE_MOCK_DATA === "1";
-
-/* ---------------- Mock data (fallback only — used if a query errors) ---------------- */
-
-const MOCK_SCENARIOS: ScenarioAggregate[] = [
-  {
-    scenarioId: "SCN-001",
-    scenarioName: "Residential Burglary — Trace Evidence",
-    completionRate: 92,
-    avgTimeMin: 15,
-    commonError: "Incomplete scene photography",
-    errorFrequency: 23,
-  },
-  {
-    scenarioId: "SCN-002",
-    scenarioName: "Structure Fire — Origin & Cause",
-    completionRate: 74,
-    avgTimeMin: 21,
-    commonError: "Premature conclusion",
-    errorFrequency: 22,
-  },
-  {
-    scenarioId: "SCN-003",
-    scenarioName: "Vehicular Fatality — Reconstruction",
-    completionRate: 81,
-    avgTimeMin: 19,
-    commonError: "Sequence violation",
-    errorFrequency: 23,
-  },
-  {
-    scenarioId: "SCN-004",
-    scenarioName: "Digital Device Seizure — Chain of Custody",
-    completionRate: 58,
-    avgTimeMin: 24,
-    commonError: "Chain-of-custody gap",
-    errorFrequency: 22,
-  },
-  {
-    scenarioId: "SCN-005",
-    scenarioName: "Homicide — Bloodstain Pattern Analysis",
-    completionRate: 66,
-    avgTimeMin: 26,
-    commonError: "Misidentified trace evidence",
-    errorFrequency: 22,
-  },
-];
-
-const MOCK_SCENARIO = MOCK_SCENARIOS[0];
-
-const MOCK_ERROR_LOG: ErrorLogEntry[] = [
-  { label: "Incomplete scene photography", occurrences: 23 },
-  { label: "Sequence violation", occurrences: 23 },
-  { label: "Premature conclusion", occurrences: 22 },
-  { label: "Chain-of-custody gap", occurrences: 22 },
-  { label: "Cross-contamination", occurrences: 22 },
-  { label: "Misidentified trace evidence", occurrences: 22 },
-];
-
-const MOCK_STUDENTS: StudentSessionSummary[] = [
-  {
-    id: "STU-0231",
-    name: "Priya Nakamura",
-    role: "Photographer",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 92,
-    compliance: 89,
-    completionPct: 100,
-    timeOnTaskMin: 6,
-    errorCount: 1,
-    sessionId: "SES-231",
-    trendPts: 4,
-  },
-  {
-    id: "STU-0232",
-    name: "Devon Marsh",
-    role: "IOC",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 74,
-    compliance: 68,
-    completionPct: 80,
-    timeOnTaskMin: 10,
-    errorCount: 4,
-    sessionId: "SES-232",
-    trendPts: -2,
-  },
-  {
-    id: "STU-0233",
-    name: "Lucia Ferreira",
-    role: "Photographer",
-    section: "B",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 85,
-    compliance: 91,
-    completionPct: 100,
-    timeOnTaskMin: 7,
-    errorCount: 1,
-    sessionId: "SES-233",
-    trendPts: 1,
-  },
-  {
-    id: "STU-0234",
-    name: "Samuel Okoro",
-    role: "IOC",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 79,
-    compliance: 73,
-    completionPct: 60,
-    timeOnTaskMin: 12,
-    errorCount: 3,
-    sessionId: "SES-234",
-    trendPts: 6,
-  },
-  {
-    id: "STU-0235",
-    name: "Grace Whitfield",
-    role: "Photographer",
-    section: "B",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 96,
-    compliance: 94,
-    completionPct: 100,
-    timeOnTaskMin: 6,
-    errorCount: 0,
-    sessionId: "SES-235",
-    trendPts: 2,
-  },
-  {
-    id: "STU-0236",
-    name: "Marcus Bellweather",
-    role: "IOC",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 68,
-    compliance: 71,
-    completionPct: 80,
-    timeOnTaskMin: 11,
-    errorCount: 5,
-    sessionId: "SES-236",
-    trendPts: -5,
-  },
-  {
-    id: "STU-0237",
-    name: "Anya Volkov",
-    role: "Photographer",
-    section: "B",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 88,
-    compliance: 84,
-    completionPct: 100,
-    timeOnTaskMin: 8,
-    errorCount: 2,
-    sessionId: "SES-237",
-    trendPts: 3,
-  },
-  {
-    id: "STU-0238",
-    name: "Tyrell Jackson",
-    role: "IOC",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 81,
-    compliance: 77,
-    completionPct: 80,
-    timeOnTaskMin: 9,
-    errorCount: 2,
-    sessionId: "SES-238",
-    trendPts: 0,
-  },
-  {
-    id: "STU-0239",
-    name: "Naomi Chen",
-    role: "Photographer",
-    section: "B",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 90,
-    compliance: 88,
-    completionPct: 100,
-    timeOnTaskMin: 7,
-    errorCount: 1,
-    sessionId: "SES-239",
-    trendPts: 5,
-  },
-  {
-    id: "STU-0240",
-    name: "Owen Radcliffe",
-    role: "IOC",
-    section: "A",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 71,
-    compliance: 65,
-    completionPct: 60,
-    timeOnTaskMin: 12,
-    errorCount: 4,
-    sessionId: "SES-240",
-    trendPts: -3,
-  },
-  {
-    id: "STU-0241",
-    name: "Isabela Cruz",
-    role: "Photographer",
-    section: "C",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 94,
-    compliance: 90,
-    completionPct: 100,
-    timeOnTaskMin: 6,
-    errorCount: 1,
-    sessionId: "SES-241",
-    trendPts: 3,
-  },
-  {
-    id: "STU-0242",
-    name: "Kwame Asante",
-    role: "IOC",
-    section: "C",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 76,
-    compliance: 72,
-    completionPct: 80,
-    timeOnTaskMin: 11,
-    errorCount: 3,
-    sessionId: "SES-242",
-    trendPts: 1,
-  },
-  {
-    id: "STU-0243",
-    name: "Freya Lindqvist",
-    role: "Photographer",
-    section: "D",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 89,
-    compliance: 86,
-    completionPct: 100,
-    timeOnTaskMin: 7,
-    errorCount: 2,
-    sessionId: "SES-243",
-    trendPts: 2,
-  },
-  {
-    id: "STU-0244",
-    name: "Ravi Deshmukh",
-    role: "IOC",
-    section: "D",
-    scenarioId: "SCN-001",
-    scenarioName: MOCK_SCENARIO.scenarioName,
-    accuracy: 63,
-    compliance: 69,
-    completionPct: 60,
-    timeOnTaskMin: 13,
-    errorCount: 6,
-    sessionId: "SES-244",
-    trendPts: -6,
-  },
-];
-
-// event_kind/correct values here match migration 004's own backfill of
-// these exact five rows (§2) - "Photographed" is the vacuous-true case that
-// migration exists to stop fabricating, corrected to informational/null
-// rather than left as true.
-const MOCK_TIMELINE: Record<string, EvidenceEvent[]> = {
-  "SES-232": [
-    {
-      timestamp: "00:02:11",
-      action: "Photographed",
-      item: "Kitchen knife",
-      eventKind: "informational",
-      correct: null,
-    },
-    {
-      timestamp: "00:04:38",
-      action: "Connected evidence",
-      item: "Knife → Weapon theory",
-      eventKind: "inferential",
-      correct: true,
-    },
-    {
-      timestamp: "00:07:52",
-      action: "Connected evidence",
-      item: "Broken glass → Weapon theory",
-      eventKind: "inferential",
-      correct: false,
-      note: "Contradicts blood-spatter direction",
-    },
-    {
-      timestamp: "00:12:05",
-      action: "Skipped step",
-      item: "Did not review witness statement B",
-      eventKind: "procedural",
-      correct: false,
-    },
-    {
-      timestamp: "00:18:44",
-      action: "Submitted theory",
-      item: "Final deduction",
-      eventKind: "inferential",
-      correct: false,
-      note: "Missed a required link",
-    },
-  ],
-
-  // The other 13 mock students never had a timeline authored at all -
-  // getEvidenceTimeline only falls back to MOCK_TIMELINE on a genuine query
-  // error, and a nonexistent session_id returns an empty *success*, not an
-  // error, so every one of these was silently showing "no events" the
-  // instant the class-overview -> timeline link made them clickable.
-  // Illustrative only (same spirit as MOCK_SCENARIOS/CLASS_TREND elsewhere
-  // in this file) - counts of danger/warning rows loosely track each
-  // student's own errorCount above, not meant to sum to it exactly.
-  "SES-231": [
-    { timestamp: "00:01:40", action: "Photographed", item: "Broken window latch", eventKind: "informational", correct: null },
-    { timestamp: "00:01:55", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:20", action: "Skipped step", item: "Bloody footprint", eventKind: "procedural", correct: false, note: "Attempted to log before photographing" },
-    { timestamp: "00:04:10", action: "Logged", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:05:45", action: "Sealed", item: "Broken window latch", eventKind: "informational", correct: null },
-  ],
-  "SES-233": [
-    { timestamp: "00:01:20", action: "Photographed", item: "Missing jewelry box", eventKind: "informational", correct: null },
-    { timestamp: "00:01:50", action: "Marked evidence", item: "Missing jewelry box", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:05", action: "Marked evidence", item: "Muddy footprint", eventKind: "inferential", correct: true },
-    { timestamp: "00:04:30", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
-    { timestamp: "00:06:15", action: "Processed", item: "Missing jewelry box", eventKind: "informational", correct: null },
-  ],
-  "SES-234": [
-    { timestamp: "00:01:35", action: "Marked evidence", item: "Pried door frame", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:00", action: "Marked non-evidence", item: "Decorative vase", eventKind: "inferential", correct: false, note: "Not connected to point of entry" },
-    { timestamp: "00:05:10", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:07:40", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
-    { timestamp: "00:09:20", action: "Logged", item: "Pried door frame", eventKind: "informational", correct: null },
-  ],
-  "SES-235": [
-    { timestamp: "00:00:55", action: "Photographed", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:01:20", action: "Marked evidence", item: "Bloody footprint", eventKind: "inferential", correct: true },
-    { timestamp: "00:02:40", action: "Sketched", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:03:50", action: "Logged", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:04:45", action: "Sealed", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:05:30", action: "Processed", item: "Bloody footprint", eventKind: "informational", correct: null },
-  ],
-  "SES-236": [
-    { timestamp: "00:01:10", action: "Marked non-evidence", item: "Family photo frame", eventKind: "inferential", correct: false },
-    { timestamp: "00:02:15", action: "Skipped step", item: "Family photo frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:00", action: "Marked evidence", item: "Forced window latch", eventKind: "inferential", correct: true },
-    { timestamp: "00:05:30", action: "Skipped step", item: "Forced window latch", eventKind: "procedural", correct: false },
-    { timestamp: "00:07:00", action: "Reclaimed marker", item: "Decorative vase", eventKind: "informational", correct: null },
-    { timestamp: "00:08:45", action: "Skipped step", item: "Decorative vase", eventKind: "procedural", correct: false },
-  ],
-  "SES-237": [
-    { timestamp: "00:01:05", action: "Photographed", item: "Kitchen knife", eventKind: "informational", correct: null },
-    { timestamp: "00:01:30", action: "Marked evidence", item: "Kitchen knife", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:15", action: "Skipped step", item: "Kitchen knife", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:40", action: "Marked non-evidence", item: "Coat on floor", eventKind: "inferential", correct: false },
-    { timestamp: "00:06:20", action: "Processed", item: "Kitchen knife", eventKind: "informational", correct: null },
-  ],
-  "SES-238": [
-    { timestamp: "00:01:15", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
-    { timestamp: "00:02:50", action: "Skipped step", item: "Broken window latch", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:30", action: "Marked evidence", item: "Pried door frame", eventKind: "inferential", correct: true },
-    { timestamp: "00:06:00", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:07:20", action: "Logged", item: "Pried door frame", eventKind: "informational", correct: null },
-  ],
-  "SES-239": [
-    { timestamp: "00:00:50", action: "Photographed", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:01:15", action: "Marked evidence", item: "Bloody footprint", eventKind: "inferential", correct: true },
-    { timestamp: "00:02:45", action: "Skipped step", item: "Bloody footprint", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:00", action: "Sealed", item: "Bloody footprint", eventKind: "informational", correct: null },
-    { timestamp: "00:04:50", action: "Processed", item: "Bloody footprint", eventKind: "informational", correct: null },
-  ],
-  "SES-240": [
-    { timestamp: "00:01:30", action: "Marked non-evidence", item: "Spilled coffee stain", eventKind: "inferential", correct: false },
-    { timestamp: "00:03:00", action: "Skipped step", item: "Spilled coffee stain", eventKind: "procedural", correct: false },
-    { timestamp: "00:05:10", action: "Marked evidence", item: "Forced door frame", eventKind: "inferential", correct: true },
-    { timestamp: "00:07:00", action: "Skipped step", item: "Forced door frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:09:15", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
-  ],
-  "SES-241": [
-    { timestamp: "00:00:45", action: "Photographed", item: "Missing jewelry box", eventKind: "informational", correct: null },
-    { timestamp: "00:01:10", action: "Marked evidence", item: "Missing jewelry box", eventKind: "inferential", correct: true },
-    { timestamp: "00:02:30", action: "Marked evidence", item: "Muddy footprint", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:50", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
-    { timestamp: "00:05:20", action: "Processed", item: "Missing jewelry box", eventKind: "informational", correct: null },
-  ],
-  "SES-242": [
-    { timestamp: "00:01:25", action: "Marked evidence", item: "Broken window latch", eventKind: "inferential", correct: true },
-    { timestamp: "00:03:00", action: "Marked non-evidence", item: "Umbrella by door", eventKind: "inferential", correct: false },
-    { timestamp: "00:04:40", action: "Skipped step", item: "Broken window latch", eventKind: "procedural", correct: false },
-    { timestamp: "00:06:30", action: "Skipped step", item: "Pried door frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:08:10", action: "Logged", item: "Broken window latch", eventKind: "informational", correct: null },
-  ],
-  "SES-243": [
-    { timestamp: "00:01:00", action: "Photographed", item: "Kitchen knife", eventKind: "informational", correct: null },
-    { timestamp: "00:01:25", action: "Marked evidence", item: "Kitchen knife", eventKind: "inferential", correct: true },
-    { timestamp: "00:02:50", action: "Skipped step", item: "Kitchen knife", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:15", action: "Marked non-evidence", item: "Torn curtain", eventKind: "inferential", correct: false },
-    { timestamp: "00:05:40", action: "Sealed", item: "Kitchen knife", eventKind: "informational", correct: null },
-  ],
-  "SES-244": [
-    { timestamp: "00:01:10", action: "Marked non-evidence", item: "Decorative vase", eventKind: "inferential", correct: false },
-    { timestamp: "00:02:30", action: "Skipped step", item: "Decorative vase", eventKind: "procedural", correct: false },
-    { timestamp: "00:04:00", action: "Marked non-evidence", item: "Family photo frame", eventKind: "inferential", correct: false },
-    { timestamp: "00:05:45", action: "Skipped step", item: "Family photo frame", eventKind: "procedural", correct: false },
-    { timestamp: "00:07:30", action: "Skipped step", item: "Muddy footprint", eventKind: "procedural", correct: false },
-    { timestamp: "00:09:15", action: "Marked evidence", item: "Forced window latch", eventKind: "inferential", correct: true },
-    { timestamp: "00:11:00", action: "Skipped step", item: "Forced window latch", eventKind: "procedural", correct: false },
-  ],
-};
 
 /* ---------------- Row mappers: snake_case (Postgres) -> camelCase (TS) ---------------- */
 
-function mapStudentRow(row: any): StudentSessionSummary {
+interface StudentSessionSummaryRow {
+  id: string;
+  name: string;
+  role: Role;
+  section?: string | null;
+  scenario_id: string;
+  scenario_name: string;
+  accuracy: number | null;
+  compliance: number | null;
+  completion_pct?: number | null;
+  time_on_task_min: number;
+  error_count: number;
+  session_id: string;
+  trend_pts?: number | null;
+}
+
+function mapStudentRow(row: StudentSessionSummaryRow): StudentSessionSummary {
   return {
     id: row.id,
     name: row.name,
@@ -457,7 +46,16 @@ function mapStudentRow(row: any): StudentSessionSummary {
   };
 }
 
-function mapScenarioRow(row: any): ScenarioAggregate {
+interface ScenarioAggregateRow {
+  scenario_id: string;
+  scenario_name: string;
+  completion_rate: number;
+  avg_time_min: number;
+  common_error: string;
+  error_frequency: number;
+}
+
+function mapScenarioRow(row: ScenarioAggregateRow): ScenarioAggregate {
   return {
     scenarioId: row.scenario_id,
     scenarioName: row.scenario_name,
@@ -468,7 +66,15 @@ function mapScenarioRow(row: any): ScenarioAggregate {
   };
 }
 
-function mapProfileRow(row: any): Profile {
+interface ProfileRow {
+  id: string;
+  role: "instructor" | "student";
+  full_name: string;
+  student_id: string | null;
+  section: string | null;
+}
+
+function mapProfileRow(row: ProfileRow): Profile {
   return {
     id: row.id,
     role: row.role,
@@ -478,7 +84,16 @@ function mapProfileRow(row: any): Profile {
   };
 }
 
-function mapEvidenceEventRow(row: any): EvidenceEvent {
+interface EvidenceEventRow {
+  event_timestamp: string;
+  action: string;
+  item: string;
+  event_kind: EvidenceEventKind;
+  correct: boolean | null;
+  note?: string | null;
+}
+
+function mapEvidenceEventRow(row: EvidenceEventRow): EvidenceEvent {
   return {
     timestamp: row.event_timestamp,
     action: row.action,
@@ -489,7 +104,12 @@ function mapEvidenceEventRow(row: any): EvidenceEvent {
   };
 }
 
-function mapErrorLogRow(row: any): ErrorLogEntry {
+interface ErrorLogRow {
+  label: string;
+  occurrences: number;
+}
+
+function mapErrorLogRow(row: ErrorLogRow): ErrorLogEntry {
   return {
     label: row.label,
     occurrences: row.occurrences,
@@ -532,15 +152,36 @@ export async function getMyProfile(): Promise<Profile | null> {
   return data ? mapProfileRow(data) : null;
 }
 
+/** Any profile by id — relies entirely on "instructors read all profiles"
+ *  (001_profiles.sql) for authorization: a student caller gets nothing back
+ *  for any id but their own (RLS "read own profile" only), an instructor
+ *  gets any profile. This function adds no role check of its own — same
+ *  "RLS is the real boundary" discipline as every other read in this file. */
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[supabaseClient] getProfileById query failed:", error.message);
+    return null;
+  }
+  return data ? mapProfileRow(data) : null;
+}
+
+/** @deprecated Legacy pre-assessment-pipeline table, no longer reachable
+ *  from any live route (both / and /sessions/[id] now redirect to
+ *  /class-results - see those files' own comments on why: no unique data,
+ *  no timestamps, a looser un-class-scoped RLS model). Kept only in case a
+ *  future one-off migration/reporting script still needs it; never call
+ *  this from a page. Fails closed (empty array + a logged warning) on any
+ *  query error - no mock-data fallback. */
 export async function getStudentSessionSummaries(
   scenarioId?: string,
 ): Promise<StudentSessionSummary[]> {
-  if (FORCE_MOCK_DATA) {
-    return scenarioId
-      ? MOCK_STUDENTS.filter((s) => s.scenarioId === scenarioId)
-      : MOCK_STUDENTS;
-  }
-
   const supabase = await createSupabaseServerClient();
 
   let query = supabase.from("student_session_summary").select("*");
@@ -549,18 +190,15 @@ export async function getStudentSessionSummaries(
   const { data, error } = await query;
 
   if (error) {
-    console.warn(
-      "[supabaseClient] student_session_summary query failed, using mock data:",
-      error.message,
-    );
-    return scenarioId
-      ? MOCK_STUDENTS.filter((s) => s.scenarioId === scenarioId)
-      : MOCK_STUDENTS;
+    console.warn("[supabaseClient] student_session_summary query failed:", error.message);
+    return [];
   }
 
   return (data ?? []).map(mapStudentRow);
 }
 
+/** @deprecated Legacy table, not called from any live route - see
+ *  getStudentSessionSummaries's own comment. Fails closed, no mock fallback. */
 export async function getScenarioAggregate(
   scenarioId: string,
 ): Promise<ScenarioAggregate | null> {
@@ -573,18 +211,15 @@ export async function getScenarioAggregate(
     .maybeSingle();
 
   if (error) {
-    console.warn(
-      "[supabaseClient] scenario_aggregate query failed, using mock data:",
-      error.message,
-    );
-    return MOCK_SCENARIOS.find((s) => s.scenarioId === scenarioId) ?? null;
+    console.warn("[supabaseClient] scenario_aggregate query failed:", error.message);
+    return null;
   }
 
   return data ? mapScenarioRow(data) : null;
 }
 
-/** All scenarios' aggregates, for the classwide "scenario completion
- *  rates" view and the Scenario Detail page. */
+/** @deprecated Legacy table, not called from any live route - see
+ *  getStudentSessionSummaries's own comment. Fails closed, no mock fallback. */
 export async function getAllScenarioAggregates(): Promise<
   ScenarioAggregate[]
 > {
@@ -596,23 +231,20 @@ export async function getAllScenarioAggregates(): Promise<
     .order("scenario_name", { ascending: true });
 
   if (error) {
-    console.warn(
-      "[supabaseClient] scenario_aggregate (all) query failed, using mock data:",
-      error.message,
-    );
-    return MOCK_SCENARIOS;
+    console.warn("[supabaseClient] scenario_aggregate (all) query failed:", error.message);
+    return [];
   }
 
   return (data ?? []).map(mapScenarioRow);
 }
 
+/** @deprecated Legacy table, no longer reachable from any live route - see
+ *  getStudentSessionSummaries's own comment (the ordered event timeline
+ *  this used to back is now /class-results/[sessionId]'s own real
+ *  session_events section). Fails closed, no mock fallback. */
 export async function getEvidenceTimeline(
   sessionId: string,
 ): Promise<EvidenceEvent[]> {
-  if (FORCE_MOCK_DATA) {
-    return MOCK_TIMELINE[sessionId] ?? [];
-  }
-
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -622,18 +254,15 @@ export async function getEvidenceTimeline(
     .order("sequence", { ascending: true });
 
   if (error) {
-    console.warn(
-      "[supabaseClient] evidence_events query failed, using mock data:",
-      error.message,
-    );
-    return MOCK_TIMELINE[sessionId] ?? [];
+    console.warn("[supabaseClient] evidence_events query failed:", error.message);
+    return [];
   }
 
   return (data ?? []).map(mapEvidenceEventRow);
 }
 
-/** Named failure modes aggregated across the whole class, ordered by
- *  frequency. Backs the "Common error log — classwide" view. */
+/** @deprecated Legacy table, not called from any live route - see
+ *  getStudentSessionSummaries's own comment. Fails closed, no mock fallback. */
 export async function getClassErrorLog(): Promise<ErrorLogEntry[]> {
   const supabase = await createSupabaseServerClient();
 
@@ -643,11 +272,8 @@ export async function getClassErrorLog(): Promise<ErrorLogEntry[]> {
     .order("occurrences", { ascending: false });
 
   if (error) {
-    console.warn(
-      "[supabaseClient] class_error_log query failed, using mock data:",
-      error.message,
-    );
-    return MOCK_ERROR_LOG;
+    console.warn("[supabaseClient] class_error_log query failed:", error.message);
+    return [];
   }
 
   return (data ?? []).map(mapErrorLogRow);
