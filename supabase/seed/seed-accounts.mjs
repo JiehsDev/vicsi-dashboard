@@ -30,7 +30,7 @@ function studentIdToEmail(studentId) {
   return `${studentId.trim().toLowerCase()}@${STUDENT_EMAIL_DOMAIN}`;
 }
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !serviceKey) {
@@ -39,7 +39,7 @@ if (!url || !serviceKey) {
       "",
       "  Missing credentials.",
       "",
-      `    NEXT_PUBLIC_SUPABASE_URL     ${url ? "found" : "MISSING"}`,
+      `    SUPABASE_URL     ${url ? "found" : "MISSING"}`,
       `    SUPABASE_SERVICE_ROLE_KEY    ${serviceKey ? "found" : "MISSING"}`,
       "",
       "  Add the service_role key to .env.local:",
