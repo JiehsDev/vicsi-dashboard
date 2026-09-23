@@ -15,6 +15,7 @@ import {
 } from "@/lib/results";
 import { VerificationStatusBadge } from "@/components/VerificationStatusBadge";
 import { Card } from "@/components/Card";
+import { resolveConclusion, resolveEndingTitle, resolveFindingName, resolveRelationshipName, resolveEvidenceName } from "@/lib/scenarioContent";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Any status" },
@@ -141,7 +142,14 @@ export default async function InstructorResultsPage({
                               <div className="mt-0.5 text-[12px] text-ink-muted">
                                 {r.completedAtUtc ? new Date(r.completedAtUtc).toLocaleString() : "In progress"}
                                 {r.durationSeconds ? ` · ${Math.round(r.durationSeconds / 60)} min` : ""}
+                                {r.resolvedEndingId ? ` · ${resolveEndingTitle(r.resolvedEndingId)}` : ""}
                               </div>
+                              {(r.confirmedFindingCount !== undefined || r.completedRelationshipCount !== undefined) && (
+                                <div className="mt-0.5 text-[11.5px] text-ink-subtle">
+                                  {r.confirmedFindingCount ?? 0} finding{r.confirmedFindingCount === 1 ? "" : "s"} ·{" "}
+                                  {r.completedRelationshipCount ?? 0} relationship{r.completedRelationshipCount === 1 ? "" : "s"}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-3">
                               {r.verificationStatus === "verified" && r.verifiedScore !== null && (
@@ -191,8 +199,13 @@ function OverviewCards({ overview }: { overview: Awaited<ReturnType<typeof getIn
 
 function AnalyticsSection({ overview }: { overview: Awaited<ReturnType<typeof getInstructorOverview>> }) {
   const hasAnyAnalytics =
-    overview.mostMissedEvidence.length > 0 || overview.mostCommonViolations.length > 0 || overview.endingDistribution.length > 0;
-  if (!hasAnyAnalytics && overview.averageDurationSeconds === null) return null;
+    overview.mostMissedEvidence.length > 0 ||
+    overview.mostCommonViolations.length > 0 ||
+    overview.endingDistribution.length > 0 ||
+    overview.mostCommonFindings.length > 0 ||
+    overview.mostCommonRelationshipsCompleted.length > 0 ||
+    overview.conclusionDistribution.length > 0;
+  if (!hasAnyAnalytics && overview.averageDurationSeconds === null && overview.inconclusiveRate === null) return null;
 
   return (
     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -203,13 +216,62 @@ function AnalyticsSection({ overview }: { overview: Awaited<ReturnType<typeof ge
         </div>
       </Card>
 
+      {overview.inconclusiveRate !== null && (
+        <Card>
+          <div className="mb-2 text-[12.5px] font-semibold text-ink">Inconclusive rate</div>
+          <div className="text-[13px] text-ink-muted">{Math.round(overview.inconclusiveRate * 100)}% of submitted conclusions</div>
+        </Card>
+      )}
+
+      {overview.conclusionDistribution.length > 0 && (
+        <Card>
+          <div className="mb-2 text-[12.5px] font-semibold text-ink">Most common final conclusions</div>
+          <ul className="flex flex-col gap-1 text-[12.5px] text-ink-muted">
+            {overview.conclusionDistribution.map((c) => (
+              <li key={c.conclusionId} className="flex justify-between gap-2">
+                <span>{resolveConclusion(c.conclusionId).displayName}</span>
+                <span className="tabular-nums text-ink-subtle">{c.count}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {overview.mostCommonFindings.length > 0 && (
+        <Card>
+          <div className="mb-2 text-[12.5px] font-semibold text-ink">Most common confirmed findings</div>
+          <ul className="flex flex-col gap-1 text-[12.5px] text-ink-muted">
+            {overview.mostCommonFindings.map((f) => (
+              <li key={f.findingId} className="flex justify-between gap-2">
+                <span>{resolveFindingName(f.findingId)}</span>
+                <span className="tabular-nums text-ink-subtle">{f.count}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {overview.mostCommonRelationshipsCompleted.length > 0 && (
+        <Card>
+          <div className="mb-2 text-[12.5px] font-semibold text-ink">Most commonly completed relationships</div>
+          <ul className="flex flex-col gap-1 text-[12.5px] text-ink-muted">
+            {overview.mostCommonRelationshipsCompleted.map((r) => (
+              <li key={r.relationshipId} className="flex justify-between gap-2">
+                <span>{resolveRelationshipName(r.relationshipId)}</span>
+                <span className="tabular-nums text-ink-subtle">{r.count}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {overview.mostMissedEvidence.length > 0 && (
         <Card>
           <div className="mb-2 text-[12.5px] font-semibold text-ink">Most commonly missed evidence</div>
           <ul className="flex flex-col gap-1 text-[12.5px] text-ink-muted">
             {overview.mostMissedEvidence.map((e) => (
               <li key={e.evidenceId} className="flex justify-between gap-2">
-                <span>{e.evidenceId}</span>
+                <span>{resolveEvidenceName(e.evidenceId)}</span>
                 <span className="tabular-nums text-ink-subtle">{e.count}</span>
               </li>
             ))}
@@ -233,11 +295,11 @@ function AnalyticsSection({ overview }: { overview: Awaited<ReturnType<typeof ge
 
       {overview.endingDistribution.length > 0 && (
         <Card>
-          <div className="mb-2 text-[12.5px] font-semibold text-ink">Ending distribution</div>
+          <div className="mb-2 text-[12.5px] font-semibold text-ink">Case outcome distribution</div>
           <ul className="flex flex-col gap-1 text-[12.5px] text-ink-muted">
             {overview.endingDistribution.map((e) => (
               <li key={e.endingId} className="flex justify-between gap-2">
-                <span>{e.endingId}</span>
+                <span>{resolveEndingTitle(e.endingId)}</span>
                 <span className="tabular-nums text-ink-subtle">{e.count}</span>
               </li>
             ))}

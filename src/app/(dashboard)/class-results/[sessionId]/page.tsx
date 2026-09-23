@@ -5,6 +5,8 @@ import { getResultDetail } from "@/lib/results";
 import { ResultCategoryGrid } from "@/components/ResultCategoryGrid";
 import { VerificationStatusBadge } from "@/components/VerificationStatusBadge";
 import { Card } from "@/components/Card";
+import { resolveConclusion, resolveEndingTitle, resolveRelationshipName, resolveEvidenceName } from "@/lib/scenarioContent";
+import { ConfirmedFindingsCard, InsightsCard, InvestigationReview } from "@/components/SessionReasoningPanels";
 
 export default async function InstructorResultDetailPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
@@ -70,14 +72,24 @@ export default async function InstructorResultDetailPage({ params }: { params: P
         <ResultCategoryGrid categories={result.categories} />
       </Card>
 
+      <InvestigationReview result={result} />
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
-          <div className="mb-3 text-[13px] font-semibold text-ink">Conclusion</div>
-          <div className="text-[13px] text-ink-muted">
-            Selected: <span className="font-medium text-ink">{result.selectedConclusionId ?? "None"}</span>
-          </div>
-          <div className="mt-1 text-[13px] text-ink-muted">
-            Result: <span className="font-medium text-ink">{result.resolvedEndingId ?? "Not yet resolved"}</span>
+          <div className="mb-3 text-[13px] font-semibold text-ink">Final conclusion</div>
+          {result.selectedConclusionId ? (
+            <>
+              <div className="text-[14px] font-medium text-ink">{resolveConclusion(result.selectedConclusionId).displayName}</div>
+              <p className="mt-1 text-[12.5px] text-ink-muted">{resolveConclusion(result.selectedConclusionId).description}</p>
+            </>
+          ) : (
+            <div className="text-[13px] text-ink-muted">No conclusion submitted.</div>
+          )}
+          <div className="mt-3 border-t border-border pt-3 text-[13px] text-ink-muted">
+            Case outcome:{" "}
+            <span className="font-medium text-ink">
+              {result.resolvedEndingId ? resolveEndingTitle(result.resolvedEndingId) : "Not yet resolved"}
+            </span>
           </div>
         </Card>
 
@@ -97,13 +109,17 @@ export default async function InstructorResultDetailPage({ params }: { params: P
         </Card>
       </div>
 
+      <ConfirmedFindingsCard findingIds={result.confirmedFindingIds} />
+
+      <InsightsCard insightIds={result.unlockedInsightIds} />
+
       {result.missedEvidence.length > 0 && (
         <Card className="mb-6">
           <div className="mb-3 text-[13px] font-semibold text-ink">Missed / incomplete evidence ({result.missedEvidence.length})</div>
           <ul className="flex flex-col gap-1.5">
             {result.missedEvidence.map((e) => (
               <li key={e.evidenceId} className="text-[12.5px] text-ink-muted">
-                {e.evidenceId} — final status: {e.finalStatus}
+                {resolveEvidenceName(e.evidenceId)} — final status: {e.finalStatus}
               </li>
             ))}
           </ul>
@@ -126,11 +142,11 @@ export default async function InstructorResultDetailPage({ params }: { params: P
 
       {result.relationships.length > 0 && (
         <Card className="mb-6">
-          <div className="mb-3 text-[13px] font-semibold text-ink">Deduction board relationships ({result.relationships.length})</div>
+          <div className="mb-3 text-[13px] font-semibold text-ink">Deduction relationships ({result.relationships.length})</div>
           <ul className="flex flex-col gap-1.5">
             {result.relationships.map((r) => (
               <li key={r.relationshipId} className="flex items-center justify-between gap-3 text-[12.5px]">
-                <span className="text-ink-muted">{r.relationshipId}</span>
+                <span className="text-ink-muted">{resolveRelationshipName(r.relationshipId)}</span>
                 <span className={r.state === "Completed" ? "font-medium text-good" : "text-ink-subtle"}>{r.state}</span>
               </li>
             ))}

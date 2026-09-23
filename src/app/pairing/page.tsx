@@ -1,4 +1,5 @@
 // src/app/pairing/page.tsx
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Fingerprint, Gamepad2, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
@@ -7,16 +8,33 @@ import { getEnrolledActiveAssignments, getLatestPairingCodeStatus } from "@/lib/
 import { generatePairingCodeAction, cancelPairingCodeAction } from "./actions";
 import { signOut } from "@/app/login/actions";
 
+// TEMPORARY DEVELOPMENT BYPASS - restore student pairing before final
+// deployment. When true, this whole page is unreachable: visiting /pairing
+// (whether by an old bookmark, a stray link, or typing the URL) redirects to
+// /results instead of exposing the real pairing-code flow below. Nothing
+// below this flag was deleted or altered - the entire pairing implementation
+// (this component, pairing/actions.ts, PairingCodeIdentityPanel on the Unity
+// side) is fully intact and works exactly as before the moment this flag is
+// flipped back to false. See PreSessionFlowController.cs's own matching
+// TEMPORARY DEVELOPMENT BYPASS on the Unity side.
+// TODO BEFORE FINAL STUDENT EVALUATION: restore headset pairing and remove
+// John Doe development identity.
+const PAIRING_UI_BYPASSED = true;
+
 /** Student-facing pairing page. Lives OUTSIDE the (dashboard) route group on
- *  purpose — (dashboard)/layout.tsx blocks any signed-in student with a
- *  "not built yet" message, so this page needs its own top-level route
- *  (same structural choice as /login and /signup) rather than living under
- *  that layout. */
+ *  purpose — (dashboard)/layout.tsx redirects any signed-in student to
+ *  /results now (see that layout's own bypass comment), so this page needs
+ *  its own top-level route (same structural choice as /login and /signup)
+ *  rather than living under that layout. */
 export default async function PairingPage({
   searchParams,
 }: {
   searchParams: Promise<{ generated?: string; code?: string; expiresAt?: string; assignmentId?: string; error?: string }>;
 }) {
+  if (PAIRING_UI_BYPASSED) {
+    redirect("/results");
+  }
+
   const { generated, code, expiresAt, error } = await searchParams;
 
   const supabase = await createSupabaseServerClient();

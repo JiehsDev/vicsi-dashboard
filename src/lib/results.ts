@@ -37,6 +37,13 @@ export interface ResultSummary {
   verificationStatus: string;
   verifiedScore: number | null;
   serverReceivedAtUtc: string;
+  /** Compact reasoning-coverage counts for the results LIST views (not fetched
+   *  per-row — see getMyResultSummaries/getInstructorResultSummaries, which
+   *  merge these in from one bulk query each, same pattern
+   *  getInstructorOverview already uses). Undefined (not zero) until merged
+   *  in, so a list that hasn't computed these yet doesn't render a false "0". */
+  confirmedFindingCount?: number;
+  completedRelationshipCount?: number;
 }
 
 export interface ResultDetail extends ResultSummary {
@@ -80,6 +87,15 @@ export interface ResultDetail extends ResultSummary {
    *  schema tracks per-session (there is no separate session_objectives
    *  table; see 009_assessment_sessions.sql's own table list). */
   hypotheses: { checkpointId: string; selectedOptionId: string | null; reasoningOptionId: string | null }[];
+  /** Stable finding/insight ids the student actually confirmed/unlocked this
+   *  session — raw ids only, resolved to display text at the presentation
+   *  layer via src/lib/scenarioContent.ts, never here. Reads
+   *  session_findings/session_insights (017_session_findings_insights.sql);
+   *  empty on a session uploaded before that migration/Unity DTO field
+   *  existed — see getResultDetail's own try/catch for why a missing table
+   *  degrades to an empty array rather than an error. */
+  confirmedFindingIds: string[];
+  unlockedInsightIds: string[];
 }
 
 function mapSummaryRow(row: Record<string, unknown>): ResultSummary {
@@ -103,6 +119,39 @@ function mapSummaryRow(row: Record<string, unknown>): ResultSummary {
   };
 }
 
+/** Bulk-fetches confirmedFindingCount/completedRelationshipCount for every
+ *  session in `rows` and merges them in, mutating nothing — one query per
+ *  count (not one per session), same shape getInstructorOverview's own
+ *  bulk-fetch-then-Map aggregation already uses. RLS on session_findings/
+ *  session_relationships (010/017) already scopes these to rows the caller
+ *  could see anyway, same as every other child-table read in this file. */
+async function mergeReasoningCounts<T extends ResultSummary>(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  rows: T[],
+): Promise<T[]> {
+  if (rows.length === 0) return rows;
+  const sessionIds = rows.map((r) => r.sessionId);
+
+  const [{ data: findingRows, error: findingError }, { data: relationshipRows, error: relationshipError }] = await Promise.all([
+    supabase.from("session_findings").select("session_id").in("session_id", sessionIds),
+    supabase.from("session_relationships").select("session_id").eq("state", "Completed").in("session_id", sessionIds),
+  ]);
+  if (findingError) console.warn("[results] mergeReasoningCounts session_findings failed (migration 017 applied?):", findingError.message);
+  if (relationshipError) console.warn("[results] mergeReasoningCounts session_relationships failed:", relationshipError.message);
+
+  const findingCounts = new Map<string, number>();
+  for (const f of findingRows ?? []) findingCounts.set(f.session_id, (findingCounts.get(f.session_id) ?? 0) + 1);
+
+  const relationshipCounts = new Map<string, number>();
+  for (const r of relationshipRows ?? []) relationshipCounts.set(r.session_id, (relationshipCounts.get(r.session_id) ?? 0) + 1);
+
+  return rows.map((r) => ({
+    ...r,
+    confirmedFindingCount: findingCounts.get(r.sessionId) ?? 0,
+    completedRelationshipCount: relationshipCounts.get(r.sessionId) ?? 0,
+  }));
+}
+
 /** Every session belonging to the signed-in student, newest first. RLS
  *  (students_read_own_sessions) is what actually restricts this to "own" -
  *  no student_id filter is applied here in application code. */
@@ -117,7 +166,7 @@ export async function getMyResultSummaries(): Promise<ResultSummary[]> {
     console.warn("[results] getMyResultSummaries failed:", error.message);
     return [];
   }
-  return (data ?? []).map(mapSummaryRow);
+  return mergeReasoningCounts(supabase, (data ?? []).map(mapSummaryRow));
 }
 
 /** Every session across every class the signed-in instructor teaches,
@@ -146,7 +195,7 @@ export async function getInstructorResultSummaries(): Promise<InstructorResultRo
     return [];
   }
 
-  return (data ?? []).map(mapInstructorRow);
+  return mergeReasoningCounts(supabase, (data ?? []).map(mapInstructorRow));
 }
 
 function mapInstructorRow(row: Record<string, unknown>): InstructorResultRow {
@@ -205,14 +254,35 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
 
   if (sessionError || !session) return null;
 
-  const [{ data: categoryRows }, { data: violationRows }, { data: evidenceRows }, { data: relationshipRows }, { data: eventRows }, { data: hypothesisRows }] = await Promise.all([
+  const [
+    { data: categoryRows },
+    { data: violationRows },
+    { data: evidenceRows },
+    { data: relationshipRows },
+    { data: eventRows },
+    { data: hypothesisRows },
+    { data: findingRows, error: findingError },
+    { data: insightRows, error: insightError },
+  ] = await Promise.all([
     supabase.from("session_score_categories").select("category_key, category_value, source").eq("session_id", sessionId).eq("source", "server"),
     supabase.from("session_procedure_violations").select("event_type, target_id, timestamp_ms").eq("session_id", sessionId),
     supabase.from("session_evidence_results").select("evidence_id, final_status, swabbing_done, fingerprinting_done, is_flipped, fingerprint_lab_status, tent_number, tent_letter").eq("session_id", sessionId),
     supabase.from("session_relationships").select("relationship_id, state, was_ever_selected").eq("session_id", sessionId),
     supabase.from("session_events").select("sequence_number, timestamp_ms, event_type, target_id").eq("session_id", sessionId).order("sequence_number", { ascending: true }),
     supabase.from("session_hypotheses").select("checkpoint_id, selected_option_id, reasoning_option_id").eq("session_id", sessionId),
+    // Both tables added in 017_session_findings_insights.sql, after 009-016
+    // shipped — a session's row here is simply absent (never an app-crashing
+    // error) on any environment where that migration hasn't been applied
+    // yet, same "missing table degrades to empty" precedent class_error_log
+    // already established (see BUSINESS_RULES.md §8.2). The error is still
+    // captured (not swallowed by `{ data }`-only destructuring) so a genuine
+    // failure is at least logged once below, distinct from "just not migrated yet".
+    supabase.from("session_findings").select("finding_id").eq("session_id", sessionId),
+    supabase.from("session_insights").select("insight_id").eq("session_id", sessionId),
   ]);
+
+  if (findingError) console.warn("[results] session_findings query failed (migration 017 applied?):", findingError.message);
+  if (insightError) console.warn("[results] session_insights query failed (migration 017 applied?):", insightError.message);
 
   const categories: Record<string, number> = {};
   for (const row of categoryRows ?? []) {
@@ -269,6 +339,8 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
       selectedOptionId: h.selected_option_id,
       reasoningOptionId: h.reasoning_option_id,
     })),
+    confirmedFindingIds: (findingRows ?? []).map((f) => f.finding_id),
+    unlockedInsightIds: (insightRows ?? []).map((i) => i.insight_id),
   };
 }
 
@@ -314,6 +386,18 @@ export interface InstructorOverview {
   mostMissedEvidence: { evidenceId: string; count: number }[];
   mostCommonViolations: { eventType: string; count: number }[];
   endingDistribution: { endingId: string; count: number }[];
+  /** Descriptive only — a count, not a judgment. See getInstructorOverview's
+   *  own comment on why this reads session_findings directly rather than
+   *  inferring "missed" findings (this project has no per-scenario "total
+   *  findings" registry outside the Unity repo to compare against safely). */
+  mostCommonFindings: { findingId: string; count: number }[];
+  mostCommonRelationshipsCompleted: { relationshipId: string; count: number }[];
+  conclusionDistribution: { conclusionId: string; count: number }[];
+  /** Sessions whose selectedConclusionId is CONCLUSION-INCONCLUSIVE, divided
+   *  by every session with a non-null selectedConclusionId — null if no
+   *  session has one yet, same "don't fabricate a rate from zero data"
+   *  convention averageVerifiedScore already follows. */
+  inconclusiveRate: number | null;
 }
 
 function topEntries(counts: Map<string, number>, limit = 5): { key: string; count: number }[] {
@@ -339,13 +423,19 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     { data: sessionRows, error: sessionError },
     { data: evidenceRows, error: evidenceError },
     { data: violationRows, error: violationError },
+    { data: findingRows, error: findingError },
+    { data: completedRelationshipRows, error: relationshipError },
   ] = await Promise.all([
     supabase.from("classes").select("id"),
     supabase.from("class_enrollments").select("student_id"),
     supabase.from("assessment_assignments").select("id, scenario_id"),
-    supabase.from("assessment_sessions").select("session_id, verification_status, verified_score, duration_seconds, resolved_ending_id"),
+    supabase.from("assessment_sessions").select("session_id, verification_status, verified_score, duration_seconds, resolved_ending_id, selected_conclusion_id"),
     supabase.from("session_evidence_results").select("evidence_id, final_status"),
     supabase.from("session_procedure_violations").select("event_type"),
+    // 017_session_findings_insights.sql — see getResultDetail's own comment on
+    // why a missing-table error here degrades to an empty array, not a crash.
+    supabase.from("session_findings").select("finding_id"),
+    supabase.from("session_relationships").select("relationship_id").eq("state", "Completed"),
   ]);
 
   for (const [label, error] of [
@@ -355,6 +445,8 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     ["assessment_sessions", sessionError],
     ["session_evidence_results", evidenceError],
     ["session_procedure_violations", violationError],
+    ["session_findings", findingError],
+    ["session_relationships", relationshipError],
   ] as const) {
     if (error) console.warn(`[results] getInstructorOverview ${label} query failed:`, error.message);
   }
@@ -378,6 +470,29 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     violationCounts.set(v.event_type, (violationCounts.get(v.event_type) ?? 0) + 1);
   }
 
+  const findingCounts = new Map<string, number>();
+  for (const f of findingRows ?? []) {
+    findingCounts.set(f.finding_id, (findingCounts.get(f.finding_id) ?? 0) + 1);
+  }
+
+  const relationshipCounts = new Map<string, number>();
+  for (const r of completedRelationshipRows ?? []) {
+    relationshipCounts.set(r.relationship_id, (relationshipCounts.get(r.relationship_id) ?? 0) + 1);
+  }
+
+  const conclusionCounts = new Map<string, number>();
+  let sessionsWithConclusion = 0;
+  let inconclusiveSessions = 0;
+  for (const s of sessions) {
+    const conclusionId = (s as { selected_conclusion_id?: string | null }).selected_conclusion_id;
+    if (!conclusionId) continue;
+    sessionsWithConclusion++;
+    conclusionCounts.set(conclusionId, (conclusionCounts.get(conclusionId) ?? 0) + 1);
+    if (conclusionId === "CONCLUSION-INCONCLUSIVE" || conclusionId === "conclusion-inconclusive") {
+      inconclusiveSessions++;
+    }
+  }
+
   return {
     totalClasses: classRows?.length ?? 0,
     totalStudents: new Set((enrollmentRows ?? []).map((e) => e.student_id)).size,
@@ -390,6 +505,10 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     mostMissedEvidence: topEntries(missedCounts).map(({ key, count }) => ({ evidenceId: key, count })),
     mostCommonViolations: topEntries(violationCounts).map(({ key, count }) => ({ eventType: key, count })),
     endingDistribution: [...endingCounts.entries()].sort((a, b) => b[1] - a[1]).map(([endingId, count]) => ({ endingId, count })),
+    mostCommonFindings: topEntries(findingCounts).map(({ key, count }) => ({ findingId: key, count })),
+    mostCommonRelationshipsCompleted: topEntries(relationshipCounts).map(({ key, count }) => ({ relationshipId: key, count })),
+    conclusionDistribution: [...conclusionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([conclusionId, count]) => ({ conclusionId, count })),
+    inconclusiveRate: sessionsWithConclusion > 0 ? inconclusiveSessions / sessionsWithConclusion : null,
   };
 }
 

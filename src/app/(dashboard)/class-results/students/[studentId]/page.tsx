@@ -11,6 +11,7 @@ import { ArrowLeft } from "lucide-react";
 import { getInstructorStudentSessions } from "@/lib/results";
 import { VerificationStatusBadge } from "@/components/VerificationStatusBadge";
 import { Card } from "@/components/Card";
+import { resolveEndingTitle } from "@/lib/scenarioContent";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -60,7 +61,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                     <div className="mt-0.5 text-[12px] text-ink-muted">
                       {r.completedAtUtc ? new Date(r.completedAtUtc).toLocaleString() : "In progress"}
                       {r.durationSeconds ? ` · ${Math.round(r.durationSeconds / 60)} min` : ""}
-                      {r.resolvedEndingId ? ` · ${r.resolvedEndingId}` : ""}
+                      {r.resolvedEndingId ? ` · ${resolveEndingTitle(r.resolvedEndingId)}` : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

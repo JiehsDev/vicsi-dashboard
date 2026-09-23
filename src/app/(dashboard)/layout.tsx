@@ -1,11 +1,15 @@
 // src/app/(dashboard)/layout.tsx
 import { Suspense } from "react";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
 import { signOut } from "@/app/login/actions";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getMyProfile } from "@/lib/supabaseClient";
 
+// TODO BEFORE FINAL STUDENT EVALUATION: restore headset pairing and remove
+// John Doe development identity. See supabase/seed/seed-john-doe-bypass-identity.mjs
+// (vicsi-dashboard) and PreSessionFlowController.cs's own TODO (Unity repo) for the
+// matching Unity-side restoration steps - this file's own change is web-only.
 export default async function DashboardLayout({
   children,
 }: {
@@ -22,47 +26,19 @@ export default async function DashboardLayout({
     console.error("[dashboard layout] Supabase auth check failed:", error);
   }
 
-  // Proxy only checks "signed in", not role — students authenticate through
-  // the same login. There is no student-facing area built yet (that's
-  // separate, later work per this task's own roadmap), so a student landing
-  // here gets an honest inline message instead of a redirect to a route
-  // that doesn't exist - the old version of this check redirected to
-  // "/student", which would now 404.
+  // TEMPORARY DEVELOPMENT BYPASS - restore student pairing before final
+  // deployment. Previously this branch rendered an inline "student analytics
+  // view isn't built yet - pair your headset" card with a Pair headset
+  // button. Pairing is now bypassed globally (see PreSessionFlowController's
+  // own TEMPORARY DEVELOPMENT BYPASS in the Unity repo - every session is
+  // already attributed to John Doe without ever pairing), so that card no
+  // longer reflects anything real: the "student analytics view" it claimed
+  // wasn't built is exactly /results, which already exists and needs no
+  // pairing state to load - see src/app/results/page.tsx. A signed-in
+  // student now goes straight there instead of dead-ending here.
   const profile = await getMyProfile();
   if (profile?.role === "student") {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <div className="w-full max-w-[420px] rounded-2xl border border-border bg-surface px-9 py-10 text-center shadow-[0_20px_60px_-20px_rgba(24,24,21,0.20)]">
-          <div className="text-[22px] font-bold tracking-tight text-ink">
-            TRACEBOARD
-          </div>
-          <p className="mt-3 text-[13.5px] leading-relaxed text-ink-muted">
-            The student analytics view isn&apos;t built yet — but you can
-            pair your headset to start a session.
-          </p>
-          <Link
-            href="/pairing"
-            className="mt-8 block w-full rounded-full bg-primary py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
-          >
-            Pair headset
-          </Link>
-          <Link
-            href="/results"
-            className="mt-3 block w-full rounded-full border border-border py-3.5 text-[14px] font-semibold text-ink-muted transition-colors hover:text-ink active:scale-[0.98]"
-          >
-            View my results
-          </Link>
-          <form action={signOut} className="mt-3">
-            <button
-              type="submit"
-              className="w-full rounded-full border border-border py-3.5 text-[14px] font-semibold text-ink-muted transition-colors hover:text-ink active:scale-[0.98]"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+    redirect("/results");
   }
 
   return (

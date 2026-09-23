@@ -1,8 +1,17 @@
 // src/app/results/page.tsx
 //
 // Student-facing results list (Part 5). Lives OUTSIDE the (dashboard) route
-// group for the same reason /pairing does - (dashboard)/layout.tsx blocks
-// any signed-in student outright.
+// group for the same reason /pairing does - (dashboard)/layout.tsx redirects
+// any signed-in student straight here now (see that layout's own TEMPORARY
+// DEVELOPMENT BYPASS comment) rather than rendering under it.
+//
+// This is currently THE student landing page during the pairing bypass -
+// getMyResultSummaries() below has never depended on pairing/device state,
+// only on the signed-in student's own profile (RLS-scoped), so it needed no
+// change to serve that role. TODO BEFORE FINAL STUDENT EVALUATION: once
+// headset pairing is restored, decide whether this should gain its own
+// pairing entry point back, or whether (dashboard)/layout.tsx's redirect
+// here should be narrowed to only students who are already paired.
 import Link from "next/link";
 import { Fingerprint } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
@@ -11,6 +20,7 @@ import { getMyResultSummaries } from "@/lib/results";
 import { VerificationStatusBadge } from "@/components/VerificationStatusBadge";
 import { Card } from "@/components/Card";
 import { signOut } from "@/app/login/actions";
+import { resolveEndingTitle } from "@/lib/scenarioContent";
 
 export default async function MyResultsPage() {
   const supabase = await createSupabaseServerClient();
@@ -56,9 +66,6 @@ export default async function MyResultsPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/pairing" className="text-[12.5px] font-semibold text-primary hover:underline">
-            Pair headset
-          </Link>
           <form action={signOut}>
             <button type="submit" className="text-[12.5px] font-semibold text-ink-muted hover:text-ink">
               Sign out
@@ -69,7 +76,7 @@ export default async function MyResultsPage() {
 
       {results.length === 0 ? (
         <Card tint>
-          <p className="text-[13.5px] text-ink-muted">No sessions yet. Pair your headset and complete an assessment to see results here.</p>
+          <p className="text-[13.5px] text-ink-muted">No sessions yet. Complete an assessment in the headset to see results here.</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
@@ -82,6 +89,7 @@ export default async function MyResultsPage() {
                     <div className="mt-0.5 text-[12.5px] text-ink-muted">
                       {r.completedAtUtc ? new Date(r.completedAtUtc).toLocaleString() : "In progress"}
                       {r.durationSeconds ? ` · ${Math.round(r.durationSeconds / 60)} min` : ""}
+                      {r.resolvedEndingId ? ` · ${resolveEndingTitle(r.resolvedEndingId)}` : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

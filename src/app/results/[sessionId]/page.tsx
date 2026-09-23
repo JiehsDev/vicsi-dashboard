@@ -7,6 +7,8 @@ import { getResultDetail } from "@/lib/results";
 import { ResultCategoryGrid } from "@/components/ResultCategoryGrid";
 import { VerificationStatusBadge } from "@/components/VerificationStatusBadge";
 import { Card } from "@/components/Card";
+import { resolveConclusion, resolveEndingTitle, resolveRelationshipName } from "@/lib/scenarioContent";
+import { ConfirmedFindingsCard, InsightsCard, InvestigationReview } from "@/components/SessionReasoningPanels";
 
 export default async function MyResultDetailPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
@@ -82,15 +84,29 @@ export default async function MyResultDetailPage({ params }: { params: Promise<{
         <ResultCategoryGrid categories={result.categories} />
       </Card>
 
+      <InvestigationReview result={result} />
+
       <Card className="mb-6">
-        <div className="mb-3 text-[13px] font-semibold text-ink">Conclusion</div>
-        <div className="text-[13px] text-ink-muted">
-          Selected: <span className="font-medium text-ink">{result.selectedConclusionId ?? "None"}</span>
-        </div>
-        <div className="mt-1 text-[13px] text-ink-muted">
-          Result: <span className="font-medium text-ink">{result.resolvedEndingId ?? "Not yet resolved"}</span>
+        <div className="mb-3 text-[13px] font-semibold text-ink">Final conclusion</div>
+        {result.selectedConclusionId ? (
+          <>
+            <div className="text-[14px] font-medium text-ink">{resolveConclusion(result.selectedConclusionId).displayName}</div>
+            <p className="mt-1 text-[12.5px] text-ink-muted">{resolveConclusion(result.selectedConclusionId).description}</p>
+          </>
+        ) : (
+          <div className="text-[13px] text-ink-muted">No conclusion submitted.</div>
+        )}
+        <div className="mt-3 border-t border-border pt-3 text-[13px] text-ink-muted">
+          Case outcome:{" "}
+          <span className="font-medium text-ink">
+            {result.resolvedEndingId ? resolveEndingTitle(result.resolvedEndingId) : "Not yet resolved"}
+          </span>
         </div>
       </Card>
+
+      <ConfirmedFindingsCard findingIds={result.confirmedFindingIds} />
+
+      <InsightsCard insightIds={result.unlockedInsightIds} />
 
       {result.procedureViolations.length > 0 && (
         <Card className="mb-6">
@@ -108,11 +124,11 @@ export default async function MyResultDetailPage({ params }: { params: Promise<{
 
       {result.relationships.length > 0 && (
         <Card className="mb-6">
-          <div className="mb-3 text-[13px] font-semibold text-ink">Deduction board relationships ({result.relationships.length})</div>
+          <div className="mb-3 text-[13px] font-semibold text-ink">Deduction relationships ({result.relationships.length})</div>
           <ul className="flex flex-col gap-1.5">
             {result.relationships.map((r) => (
               <li key={r.relationshipId} className="flex items-center justify-between gap-3 text-[12.5px]">
-                <span className="text-ink-muted">{r.relationshipId}</span>
+                <span className="text-ink-muted">{resolveRelationshipName(r.relationshipId)}</span>
                 <span className={r.state === "Completed" ? "font-medium text-good" : "text-ink-subtle"}>{r.state}</span>
               </li>
             ))}

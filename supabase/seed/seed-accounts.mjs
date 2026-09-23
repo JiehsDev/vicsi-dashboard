@@ -1,4 +1,4 @@
-// supabase/seed/seed-accounts.mjs
+  // supabase/seed/seed-accounts.mjs
 //
 // Creates one instructor and one student account for local development.
 //
