@@ -5,6 +5,7 @@ import { sha256Hex, canonicalPayloadHash } from "@/lib/assessmentCrypto";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rateLimit";
 import { parseRpcError } from "@/lib/assessmentErrors";
 import { verifySession } from "@/lib/scoring/verify";
+import { checkUploadTokenBinding, type UploadTokenBindingRow } from "@/lib/vrUploadAuthorization";
 
 const SUPPORTED_PAYLOAD_VERSIONS = [1];
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MiB
@@ -17,9 +18,11 @@ function extractBearerToken(request: Request): string | null {
   return token.length > 0 ? token : null;
 }
 
-/** Called from Unity after a session completes. Authorization is the
+/** Called from Unity after a session completes. Authorization is a
  *  short-lived assessment token minted by /api/v1/device-pairings/exchange
- *  — never a Supabase session cookie, never the service-role key.
+ *  (purpose = pairing) or by /api/v1/vr/session-upload-token (purpose =
+ *  vr_session_upload, bound to one sessionId - see 019) — never a Supabase
+ *  session cookie, never the service-role key.
  *  studentId/classId/assignmentId/scenarioId are resolved SERVER-SIDE from
  *  that token inside submit_assessment_session(); the equivalent fields
  *  inside the JSON body (AssessmentSessionUploadDto.studentId/classId) are
@@ -90,6 +93,28 @@ export async function POST(request: Request) {
   const payloadHash = canonicalPayloadHash(payload);
 
   const admin = createSupabaseAdminClient();
+
+  // VR session-upload tokens (019) are bound to ONE sessionId - refuse any other
+  // before submit. Pairing tokens are unbound, exactly as before. If the 019
+  // columns don't exist yet the lookup errors; no vr_session_upload token can exist
+  // without 019 either, so falling back to the unbound behavior is safe.
+  let tokenBinding: UploadTokenBindingRow | null = null;
+  {
+    const { data: bindingRow, error: bindingError } = await admin
+      .from("assessment_tokens")
+      .select("purpose, bound_session_id, is_test_session")
+      .eq("token_hash", tokenHash)
+      .maybeSingle();
+    if (bindingError) {
+      console.warn("[assessment-sessions] token binding lookup unavailable, treating as unbound:", bindingError.message);
+    } else {
+      tokenBinding = bindingRow as UploadTokenBindingRow | null;
+    }
+  }
+  if (checkUploadTokenBinding(tokenBinding, sessionId) === "wrong-session") {
+    return apiError("TOKEN_INVALID", "This upload token was issued for a different session.");
+  }
+
   const { data, error } = await admin.rpc("submit_assessment_session", {
     p_token_hash: tokenHash,
     p_payload: payload,
@@ -120,6 +145,19 @@ export async function POST(request: Request) {
   // storage: a scoring bug here must never fail the submission itself, which
   // is why this is awaited-but-caught rather than allowed to throw past this
   // point. The client always gets its receipt regardless of how scoring goes.
+  // Test-session flag comes from the TOKEN (set when the headset asked for an upload
+  // token for a "Continue Without Code" session), never from the payload. Only on a
+  // fresh insert; a failure here never fails the stored submission.
+  if (!row.duplicate && tokenBinding?.is_test_session) {
+    const { error: flagError } = await admin
+      .from("assessment_sessions")
+      .update({ is_test_session: true })
+      .eq("session_id", row.session_id);
+    if (flagError) {
+      console.error(`[assessment-sessions] could not set is_test_session for ${row.session_id}:`, flagError.message);
+    }
+  }
+
   let verificationStatus = row.verification_status as string;
   if (!row.duplicate) {
     try {

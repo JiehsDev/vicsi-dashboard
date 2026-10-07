@@ -190,6 +190,13 @@ const CONCLUSIONS: Record<string, ConclusionContent> = {
       "Multiple independent findings and completed deductions connect the wife to the blood-bearing gloves and conflict with her account of events.",
     level: "Case",
   },
+  // The active scenario's supported case conclusion (Unity: Conclusion_BROTHER-RESPONSIBLE.asset).
+  "conclusion-brother": {
+    displayName: "The Evidence Supports the Brother as Responsible",
+    description:
+      "The brother's fingerprint is on a knife consistent with the victim's wound, and the blood pattern supports an attack where the victim was found. Taken together, the physical evidence supports the brother as the person responsible.",
+    level: "Case",
+  },
   "CONCLUSION-INCONCLUSIVE": {
     displayName: "The Available Evidence Is Inconclusive",
     description:

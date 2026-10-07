@@ -2,6 +2,12 @@
 import "server-only";
 import type { GroundTruth, ScoringRules } from "./types.ts";
 import { CSI_ENVIRONMENT_GROUND_TRUTH_V1, CSI_ENVIRONMENT_SCORING_RULES_V1 } from "./data/csiEnvironment.v1.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_1 } from "./data/csiEnvironment.v1_1.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_2 } from "./data/csiEnvironment.v1_2.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_3 } from "./data/csiEnvironment.v1_3.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_4 } from "./data/csiEnvironment.v1_4.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_5 } from "./data/csiEnvironment.v1_5.ts";
+import { CSI_ENVIRONMENT_GROUND_TRUTH_V1_1 } from "./data/csiEnvironment.groundTruth.v1_1.ts";
 
 /** Versioned lookup — the ONLY place a scenarioId+version resolves to an
  *  actual ground-truth/rules object. Adding a new scenario or a new version
@@ -12,12 +18,18 @@ import { CSI_ENVIRONMENT_GROUND_TRUTH_V1, CSI_ENVIRONMENT_SCORING_RULES_V1 } fro
 const GROUND_TRUTH_REGISTRY: Record<string, Record<string, GroundTruth>> = {
   "CSI-ENVIRONMENT-001": {
     "1.0.0": CSI_ENVIRONMENT_GROUND_TRUTH_V1,
+    "1.1.0": CSI_ENVIRONMENT_GROUND_TRUTH_V1_1,
   },
 };
 
 const SCORING_RULES_REGISTRY: Record<string, Record<string, ScoringRules>> = {
   "CSI-ENVIRONMENT-001": {
     "1.0.0": CSI_ENVIRONMENT_SCORING_RULES_V1,
+    "1.1.0": CSI_ENVIRONMENT_SCORING_RULES_V1_1,
+    "1.2.0": CSI_ENVIRONMENT_SCORING_RULES_V1_2,
+    "1.3.0": CSI_ENVIRONMENT_SCORING_RULES_V1_3,
+    "1.4.0": CSI_ENVIRONMENT_SCORING_RULES_V1_4,
+    "1.5.0": CSI_ENVIRONMENT_SCORING_RULES_V1_5,
   },
 };
 
@@ -40,3 +52,32 @@ export const LATEST_GROUND_TRUTH_VERSION: Record<string, string> = {
 export const LATEST_SCORING_RULES_VERSION: Record<string, string> = {
   "CSI-ENVIRONMENT-001": "1.0.0",
 };
+
+export interface SessionScoringResolution {
+  groundTruthVersion?: string;
+  scoringRulesVersion?: string;
+  groundTruth: GroundTruth | null;
+  scoringRules: ScoringRules | null;
+}
+
+/** The versions a stored session is scored with: exactly what the session
+ *  carries, or - only when a version is MISSING (an older client that never
+ *  sent one) - the LATEST_* fallback above, which stays at the historical
+ *  1.0.0 so such sessions keep their original scoring. An unsupported or
+ *  malformed version resolves to null (the caller marks the session
+ *  requires_review) - never silently scored with the newest rules. Current
+ *  clients send scoringRulesVersion explicitly (Unity ScenarioDefinition). */
+export function resolveSessionScoring(
+  scenarioId: string,
+  groundTruthVersion: string | null | undefined,
+  scoringRulesVersion: string | null | undefined,
+): SessionScoringResolution {
+  const gtv = groundTruthVersion || LATEST_GROUND_TRUTH_VERSION[scenarioId];
+  const srv = scoringRulesVersion || LATEST_SCORING_RULES_VERSION[scenarioId];
+  return {
+    groundTruthVersion: gtv,
+    scoringRulesVersion: srv,
+    groundTruth: gtv ? resolveGroundTruth(scenarioId, gtv) : null,
+    scoringRules: srv ? resolveScoringRules(scenarioId, srv) : null,
+  };
+}

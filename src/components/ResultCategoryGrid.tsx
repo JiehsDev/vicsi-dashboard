@@ -14,6 +14,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   relationshipAccuracy: "Relationship accuracy",
   proceduralCompliance: "Procedural compliance",
   finalConclusionAccuracy: "Final conclusion accuracy",
+  scenePhotography: "Scene photography",
+  measurement: "Evidence measurement",
+  procedureOrderCompliance: "Procedure order compliance",
 };
 
 const CATEGORY_ORDER = [
@@ -26,7 +29,21 @@ const CATEGORY_ORDER = [
   "relationshipAccuracy",
   "proceduralCompliance",
   "finalConclusionAccuracy",
+  "scenePhotography",
+  "measurement",
+  "procedureOrderCompliance",
 ];
+
+/** Short detail line under a category's percentage, from a companion count
+ *  stored alongside it (never itself shown as a percentage). */
+function categoryDetail(key: string, categories: Record<string, number>): string | null {
+  if (key === "procedureOrderCompliance") {
+    const n = categories.procedureOrderWarningCount;
+    if (n === undefined || n === null) return null;
+    return `${n} out-of-order action${n === 1 ? "" : "s"}`;
+  }
+  return null;
+}
 
 /** distractorFallRate reads better inverted for a student/instructor
  *  ("avoided the distractor 100% of the time") than as a raw fall-rate,
@@ -49,6 +66,9 @@ export function ResultCategoryGrid({ categories }: { categories: Record<string, 
           <div key={key} className="rounded-xl border border-border bg-surface-tint px-3.5 py-3">
             <div className="text-[11px] font-medium leading-snug text-ink-muted">{CATEGORY_LABELS[key] ?? key}</div>
             <div className="mt-1 text-[19px] font-bold text-ink">{Math.round(display * 100)}%</div>
+            {categoryDetail(key, categories) && (
+              <div className="mt-0.5 text-[11px] text-ink-muted">{categoryDetail(key, categories)}</div>
+            )}
           </div>
         );
       })}

@@ -152,12 +152,74 @@ export interface CategoryWeights {
   relationshipAccuracy: number;
   proceduralCompliance: number;
   finalConclusionAccuracy: number;
+  /** Optional - absent (treated as 0) in rules versions that predate scene
+   *  photography, so those versions' overall score is unchanged. */
+  scenePhotography?: number;
+  /** Optional - absent (treated as 0) in rules versions before 1.2.0. */
+  measurement?: number;
+  /** Optional - absent (treated as 0) in rules versions before 1.3.0. */
+  procedureOrderCompliance?: number;
+}
+
+/** Which ProcedureOutOfOrder warnings count toward procedure order compliance
+ *  and when another category already owns the mistake - see
+ *  procedureOrderScorer.ts. */
+export interface ProcedureOrderCountableWarning {
+  procedureId: string;
+  excludeWhen?: "sceneAttemptSamePress" | "measurementNotCompletedOnTime";
+}
+
+export interface ProcedureOrderScoringRules {
+  /** Score lost per unique countable warning (0.1 = 10 points); floor 0. */
+  penaltyPerWarning: number;
+  /** How far back (ms) a scene-photo attempt counts as the same shutter press. */
+  samePressWindowMs: number;
+  countable: ProcedureOrderCountableWarning[];
+}
+
+/** One required evidence-position measurement: the authoritative expected
+ *  floor-plan distances from two scene reference points (Unity's
+ *  MeasurementRequirement). */
+export interface MeasurementRequirementRule {
+  requirementId: string;
+  evidenceId: string;
+  referenceAId: string;
+  referenceBId: string;
+  expectedDistanceA: number;
+  expectedDistanceB: number;
+  tolerance: number;
+  /** Defaults to true; a non-required item is not scored. */
+  required?: boolean;
+}
+
+/** Measurement component weights (normalized by their sum) plus the
+ *  requirements a session is scored against - see measurementScorer.ts. */
+export interface MeasurementScoringRules {
+  completionWeight: number;
+  accuracyWeight: number;
+  timingWeight: number;
+  requirements: MeasurementRequirementRule[];
+}
+
+/** Relative weights of the three scene-photography components (normalized by
+ *  their sum) - see scenePhotographyScorer.ts. Mirrors Unity's
+ *  ScenePhotographyWeights (client display only); this copy is authoritative. */
+export interface ScenePhotographyScoringRules {
+  coverageWeight: number;
+  sequenceWeight: number;
+  accuracyWeight: number;
 }
 
 export interface ScoringRules {
   scoringRulesVersion: string;
   procedural: ProceduralScoringRules;
   categoryWeights: CategoryWeights;
+  /** Optional - when absent, scenePhotographyScorer.ts's defaults apply. */
+  scenePhotography?: ScenePhotographyScoringRules;
+  /** Present from 1.2.0; absent means measurement is not scored. */
+  measurement?: MeasurementScoringRules;
+  /** Present from 1.3.0; absent means warning-level order is not scored. */
+  procedureOrder?: ProcedureOrderScoringRules;
 }
 
 /** Every category this module can produce. A category is omitted (not 0)
@@ -173,6 +235,24 @@ export interface ScoreCategories {
   relationshipAccuracy?: number;
   proceduralCompliance?: number;
   finalConclusionAccuracy?: number;
+  /** Scene photography (location documentation) score and its three
+   *  components - undefined for a session with no ScenePhotographyStarted event
+   *  (an older client, or a scenario without a scene photography route). */
+  scenePhotography?: number;
+  scenePhotographyCoverage?: number;
+  scenePhotographySequence?: number;
+  scenePhotographyAccuracy?: number;
+  /** Evidence-position measurement score and its three components -
+   *  undefined under rules versions without a measurement section. */
+  measurement?: number;
+  measurementCompletion?: number;
+  measurementAccuracy?: number;
+  measurementTiming?: number;
+  /** Warning-level out-of-order actions (1.3.0+) and how many were scored -
+   *  undefined under earlier rules versions. The count is stored alongside
+   *  for display; it is not a weighted category. */
+  procedureOrderCompliance?: number;
+  procedureOrderWarningCount?: number;
   overallScore?: number;
 }
 

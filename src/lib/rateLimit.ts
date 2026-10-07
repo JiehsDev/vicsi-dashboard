@@ -46,6 +46,26 @@ export const RATE_LIMITS = {
     limit: envInt("RATE_LIMIT_SUBMISSION_SESSION_MAX", 10),
     windowSeconds: envInt("RATE_LIMIT_SUBMISSION_SESSION_WINDOW_SECONDS", 60),
   },
+  vrValidatePerDevice: {
+    limit: envInt("RATE_LIMIT_VR_VALIDATE_MAX", 10),
+    windowSeconds: envInt("RATE_LIMIT_VR_VALIDATE_WINDOW_SECONDS", 60),
+  },
+  vrValidatePerIp: {
+    limit: envInt("RATE_LIMIT_VR_VALIDATE_IP_MAX", 30),
+    windowSeconds: envInt("RATE_LIMIT_VR_VALIDATE_IP_WINDOW_SECONDS", 60),
+  },
+  vrUploadTokenPerIp: {
+    limit: envInt("RATE_LIMIT_VR_UPLOAD_TOKEN_IP_MAX", 60),
+    windowSeconds: envInt("RATE_LIMIT_VR_UPLOAD_TOKEN_IP_WINDOW_SECONDS", 60),
+  },
+  vrUploadTokenPerSession: {
+    limit: envInt("RATE_LIMIT_VR_UPLOAD_TOKEN_SESSION_MAX", 10),
+    windowSeconds: envInt("RATE_LIMIT_VR_UPLOAD_TOKEN_SESSION_WINDOW_SECONDS", 60),
+  },
+  vrDirectoryPerIp: {
+    limit: envInt("RATE_LIMIT_VR_DIRECTORY_IP_MAX", 20),
+    windowSeconds: envInt("RATE_LIMIT_VR_DIRECTORY_IP_WINDOW_SECONDS", 60),
+  },
 } as const;
 
 /** Records one hit against `bucketKey` and reports whether it's within

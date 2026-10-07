@@ -31,6 +31,13 @@ export function computeOverallScore(categories: ScoreCategories, weights: Catego
     [categories.relationshipAccuracy, weights.relationshipAccuracy],
     [categories.proceduralCompliance, weights.proceduralCompliance],
     [categories.finalConclusionAccuracy, weights.finalConclusionAccuracy],
+    // Weight absent in rules versions before 1.1.0 -> 0 -> skipped, so those
+    // versions' overall score is exactly what it was.
+    [categories.scenePhotography, weights.scenePhotography ?? 0],
+    // Same for measurement before 1.2.0.
+    [categories.measurement, weights.measurement ?? 0],
+    // And procedure order compliance before 1.3.0.
+    [categories.procedureOrderCompliance, weights.procedureOrderCompliance ?? 0],
   ];
 
   let weightedSum = 0;

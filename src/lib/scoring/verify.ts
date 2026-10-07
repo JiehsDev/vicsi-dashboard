@@ -6,7 +6,10 @@ import { scoreRelationships } from "./relationshipScorer.ts";
 import { scoreProcedural } from "./proceduralScorer.ts";
 import { scoreConclusion } from "./conclusionScorer.ts";
 import { computeOverallScore } from "./overallScore.ts";
-import { resolveGroundTruth, resolveScoringRules, LATEST_GROUND_TRUTH_VERSION, LATEST_SCORING_RULES_VERSION } from "./registry.ts";
+import { scoreScenePhotography } from "./scenePhotographyScorer.ts";
+import { scoreMeasurement } from "./measurementScorer.ts";
+import { scoreProcedureOrder } from "./procedureOrderScorer.ts";
+import { resolveSessionScoring } from "./registry.ts";
 import type { ScoreCategories, ScoringSessionEvent } from "./types.ts";
 
 export interface VerifyOutcome {
@@ -40,11 +43,11 @@ export async function verifySession(sessionId: string): Promise<VerifyOutcome> {
     return await fail(admin, sessionId, "verification_failed", "Session not found for verification.");
   }
 
-  const groundTruthVersion = session.ground_truth_version || LATEST_GROUND_TRUTH_VERSION[session.scenario_id];
-  const scoringRulesVersion = session.scoring_rules_version || LATEST_SCORING_RULES_VERSION[session.scenario_id];
-
-  const groundTruth = groundTruthVersion ? resolveGroundTruth(session.scenario_id, groundTruthVersion) : null;
-  const scoringRules = scoringRulesVersion ? resolveScoringRules(session.scenario_id, scoringRulesVersion) : null;
+  const { groundTruthVersion, scoringRulesVersion, groundTruth, scoringRules } = resolveSessionScoring(
+    session.scenario_id,
+    session.ground_truth_version,
+    session.scoring_rules_version,
+  );
 
   if (!groundTruth || !scoringRules) {
     return await fail(
@@ -105,6 +108,33 @@ export async function verifySession(sessionId: string): Promise<VerifyOutcome> {
     proceduralCompliance: proceduralResult.proceduralCompliance,
     finalConclusionAccuracy,
   };
+
+  // Scored for every rules version (it's its own category); only counts toward
+  // overallScore when the rules give it a weight (1.1.0+).
+  const scenePhotoResult = scoreScenePhotography(events, scoringRules.scenePhotography);
+  if (scenePhotoResult.scenePhotography !== undefined) {
+    categories.scenePhotography = scenePhotoResult.scenePhotography;
+    categories.scenePhotographyCoverage = scenePhotoResult.scenePhotographyCoverage;
+    categories.scenePhotographySequence = scenePhotoResult.scenePhotographySequence;
+    categories.scenePhotographyAccuracy = scenePhotoResult.scenePhotographyAccuracy;
+  }
+
+  // Only rules 1.2.0+ carry measurement requirements; earlier versions leave
+  // the category undefined, so their sessions score exactly as before.
+  const measurementResult = scoreMeasurement(events, scoringRules.measurement);
+  if (measurementResult.measurement !== undefined) {
+    categories.measurement = measurementResult.measurement;
+    categories.measurementCompletion = measurementResult.measurementCompletion;
+    categories.measurementAccuracy = measurementResult.measurementAccuracy;
+    categories.measurementTiming = measurementResult.measurementTiming;
+  }
+
+  // Only rules 1.3.0+ carry a procedureOrder section.
+  const procedureOrderResult = scoreProcedureOrder(events, scoringRules.procedureOrder);
+  if (procedureOrderResult.procedureOrderCompliance !== undefined) {
+    categories.procedureOrderCompliance = procedureOrderResult.procedureOrderCompliance;
+    categories.procedureOrderWarningCount = procedureOrderResult.procedureOrderWarningCount;
+  }
 
   const overallScore = computeOverallScore(categories, scoringRules.categoryWeights);
   categories.overallScore = overallScore;

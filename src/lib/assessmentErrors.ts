@@ -18,6 +18,12 @@ const KNOWN_RPC_CODES: ReadonlySet<ApiErrorCode> = new Set([
   "TOKEN_EXPIRED",
   "SESSION_PAYLOAD_CONFLICT",
   "EVENT_LIMIT_EXCEEDED",
+  // issue_vr_upload_token (019)
+  "STUDENT_NOT_FOUND",
+  "STUDENT_NOT_PERMITTED",
+  "STUDENT_DISABLED",
+  "SESSION_OWNER_MISMATCH",
+  "NO_ASSIGNMENT",
 ]);
 
 export interface ParsedRpcError {
