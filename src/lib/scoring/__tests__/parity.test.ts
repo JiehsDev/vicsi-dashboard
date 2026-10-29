@@ -28,9 +28,11 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { resolveGroundTruth } from "../registry.ts";
 import { fileURLToPath } from "node:url";
 import { scoreEvidence } from "../evidenceScorer.ts";
-import { CSI_ENVIRONMENT_GROUND_TRUTH_V1 } from "../data/csiEnvironment.v1.ts";
+
 import type { ScoringSessionEvent } from "../types.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -82,9 +84,13 @@ function readFixtureEvents(name: string): ScoringSessionEvent[] {
     .map((l) => JSON.parse(l));
 }
 
-function runDotnetScorer(fixtureName: string): Record<string, number> {
+function runDotnetScorer(fixtureName: string, version = "1.0.0"): Record<string, number> {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "vicsi-parity-"));
+  const keyPath = path.join(temp, "groundTruth.json");
+  fs.writeFileSync(keyPath, JSON.stringify(resolveGroundTruth("CSI-ENVIRONMENT-001", version)));
+  try {
   const sessionPath = path.join(FIXTURES_DIR, `${fixtureName}.jsonl`);
-  const stdout = execFileSync("dotnet", ["run", "--project", SCORER_PROJECT, "--", sessionPath, REAL_GROUND_TRUTH_EXPORT], {
+  const stdout = execFileSync("dotnet", ["run", "--project", SCORER_PROJECT, "--", sessionPath, keyPath], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -94,6 +100,7 @@ function runDotnetScorer(fixtureName: string): Record<string, number> {
   const jsonStart = stdout.lastIndexOf("\n{");
   const jsonText = stdout.slice(jsonStart + 1);
   return JSON.parse(jsonText);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 }
 
 const skipReason = !dotnetAvailable()
@@ -104,11 +111,12 @@ const skipReason = !dotnetAvailable()
       ? `Ground truth export not found at ${REAL_GROUND_TRUTH_EXPORT}`
       : null;
 
+for (const version of ["1.0.0", "1.1.0", "1.2.0"]) {
 for (const fixtureName of FIXTURES) {
-  test(`parity: ${fixtureName}`, { skip: skipReason ?? false }, () => {
-    const dotnetReport = runDotnetScorer(fixtureName);
+  test(`parity ${version}: ${fixtureName}`, { skip: skipReason ?? false }, () => {
+    const dotnetReport = runDotnetScorer(fixtureName, version);
     const events = readFixtureEvents(fixtureName);
-    const tsReport = scoreEvidence(events, CSI_ENVIRONMENT_GROUND_TRUTH_V1);
+    const tsReport = scoreEvidence(events, resolveGroundTruth("CSI-ENVIRONMENT-001", version)!);
 
     for (const [tsKey, dotnetKey] of PORTED_CATEGORIES) {
       const dotnetValue = dotnetReport[dotnetKey];
@@ -128,4 +136,6 @@ for (const fixtureName of FIXTURES) {
       );
     }
   });
+}
+
 }

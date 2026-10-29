@@ -199,6 +199,8 @@ export interface MeasurementScoringRules {
   accuracyWeight: number;
   timingWeight: number;
   requirements: MeasurementRequirementRule[];
+  /** Named non-scored scene geometry. Missing layout tags retain the historical key. */
+  layoutProfiles?: Record<string, MeasurementRequirementRule[]>;
 }
 
 /** Relative weights of the three scene-photography components (normalized by
@@ -212,6 +214,12 @@ export interface ScenePhotographyScoringRules {
 
 export interface ScoringRules {
   scoringRulesVersion: string;
+  /** Present only in the append-only 1.7.0 deduction model. */
+  deduction?: DeductionScoringDefinition;
+  /** Pure completion statements excluded from documentation assessment only.
+   * Absent in historical versions: every classified report line stays scored.
+   * Raw report selections and the answer key remain unchanged. */
+  trainingReportLines?: Array<{ evidenceId: string; lineId: string }>;
   procedural: ProceduralScoringRules;
   categoryWeights: CategoryWeights;
   /** Optional - when absent, scenePhotographyScorer.ts's defaults apply. */
@@ -226,6 +234,21 @@ export interface ScoringRules {
  *  when its denominator is undefined — see each scorer's own comment,
  *  mirroring Ratio()'s NaN-not-zero rule in the .NET reference. */
 export interface ScoreCategories {
+  /** 1.7.0 assessed ratios, independent of retained legacy/training analytics. */
+  reasoningCheckpoints?: number;
+  deductionRelationships?: number;
+  finalConclusion?: number;
+  reasoningCheckpointComponent?: number;
+  deductionRelationshipComponent?: number;
+  finalConclusionComponent?: number;
+  reasoningCheckpointEarned?: number;
+  reasoningCheckpointMaximum?: number;
+  reasoningCheckpointAnswered?: number;
+  reasoningCheckpointEligibleUnanswered?: number;
+  reasoningCheckpointUndiscovered?: number;
+  unsupportedDeductionRelationships?: number;
+  deductionAssessmentComplete?: number;
+  deductionTotalScore?: number;
   criticalRecall?: number;
   relevantRecall?: number;
   precision?: number;
@@ -254,6 +277,37 @@ export interface ScoreCategories {
   procedureOrderCompliance?: number;
   procedureOrderWarningCount?: number;
   overallScore?: number;
+}
+
+export interface DeductionCheckpointState {
+  checkpointId: string; responseId: string; wasEligible: boolean;
+  responseOrder: number; eligibleSeconds: number; answeredSeconds: number;
+}
+export interface DeductionAssessmentInput {
+  questionRecordVersion?:number;
+  questionRecords?:import("../sessionRecord.ts").QuestionRecord[];
+  scoringRulesVersion: string; contentVersion: string;
+  selectedConclusionId: string; resolvedEndingId: string;
+  atConclusion: boolean; requiresSceneRelease: boolean; checkpointSystemReady: boolean;
+  form1Received: boolean; victimObserved: boolean; sceneSecurityAcknowledged: boolean;
+  iocObservationIds: string[]; confirmedFindingIds: string[]; discoveredStatementIds: string[]; observedEvidenceIds: string[];
+  checkpoints: DeductionCheckpointState[]; completedRelationshipIds: string[];
+  boardConnections: Array<{sourceId:string;targetId:string}>;
+  relationshipReviewVersion?: number;
+  relationshipResponses?: Array<{relationshipId:string;responseId:string;responseOrder:number;answeredSeconds:number}>;
+}
+export interface DeductionScoringDefinition {
+  scoringRulesVersion: string; scenarioId: string; scenarioVersion: string; groundTruthVersion: string; contentVersion: string;
+  validationStatus: string; checkpointWeight: number; relationshipWeight: number; conclusionWeight: number;
+  maximumCheckpointWeight: number; unsupportedRelationshipPenalty: number;
+  checkpoints: Array<{id:string;trigger:number;findingId:string;category:string;responses:Array<{id:string;weight:number}>}>;
+  relationships: Array<{id:string;sourceId:string;targetId:string;weight:number;findingIds:string[];statementId:string;evidenceId:string;requiresForm1:boolean;
+    reviewPrompt?:string;correctInterpretationId?:string;interpretations?:Array<{id:string;text:string}>}>;
+  supportedFindingIds:string[]; supportedRelationshipIds:string[]; supportedStatementId:string;
+  supportedConclusionId:string; supportedEndingId:string; prematureEndingId:string;
+  peterConclusionId:string; peterEndingId:string; inconclusiveConclusionId:string; inconclusiveEndingId:string;
+  supportedConclusionCredit:number; prematureConclusionCredit:number; peterConclusionCredit:number;
+  inconclusiveInsufficientCredit:number; inconclusiveSupportedCredit:number;
 }
 
 /** Supporting counts alongside each ratio, so a result can be audited

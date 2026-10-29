@@ -47,7 +47,7 @@ export function TopNav({
               VR
             </div>
             <div className="text-[15px] font-extrabold tracking-tight text-ink">
-              TRACEBOARD
+              ViCSI
             </div>
           </div>
 

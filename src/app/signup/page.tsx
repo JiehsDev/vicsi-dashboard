@@ -20,7 +20,7 @@ export default async function SignupPage({
               <GraduationCap size={22} strokeWidth={1.75} />
             </div>
             <div className="text-[26px] font-bold leading-tight tracking-tight text-ink">
-              TRACEBOARD
+              ViCSI
             </div>
             <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
               Create your student account to see your own evidence ID

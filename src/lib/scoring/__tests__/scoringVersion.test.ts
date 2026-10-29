@@ -2,8 +2,8 @@
 //
 // Which scoring rules a stored session is verified with (resolveSessionScoring -
 // what verify.ts uses), and what scene photography contributes under each version.
-// Current Unity clients stamp scoringRulesVersion "1.5.0" (ScenarioDefinition; see
-// cabinetMeasurementReference.test.ts); sessions stamped 1.1.0-1.4.0 keep those rules;
+// Current Unity clients stamp scoringRulesVersion "1.6.0" (ScenarioDefinition; see
+// trainingSeparation.test.ts); sessions stamped 1.1.0-1.5.0 keep those rules;
 // historical sessions stamped "1.0.0" - or nothing - keep their original scoring.
 
 import { test } from "node:test";
@@ -47,7 +47,7 @@ test("missing scoring version (older client) falls back to the historical 1.0.0,
 });
 
 test("unsupported or malformed scoring version resolves to nothing (requires_review), never the newest rules", () => {
-  for (const bad of ["9.9.9", "1.6.0", "1.1", "v1.1.0", "latest", " 1.1.0"]) {
+  for (const bad of ["9.9.9", "1.8.0", "1.1", "v1.1.0", "latest", " 1.1.0"]) {
     assert.equal(resolveSessionScoring(SCENARIO, "1.1.0", bad).scoringRules, null, bad);
   }
   assert.equal(resolveSessionScoring("UNKNOWN-SCENARIO", "1.1.0", "1.1.0").scoringRules, null);

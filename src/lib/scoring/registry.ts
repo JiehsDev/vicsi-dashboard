@@ -15,12 +15,18 @@ import { CSI_ENVIRONMENT_GROUND_TRUTH_V1_1 } from "./data/csiEnvironment.groundT
  *  under src/lib/scoring/data/, never mutating an existing version in place
  *  (a session already verified against groundTruthVersion "1" must always
  *  be re-explainable against exactly that version's answer key). */
+import { CSI_ENVIRONMENT_GROUND_TRUTH_V1_2 } from "./data/csiEnvironment.groundTruth.v1_2.ts";
+
 const GROUND_TRUTH_REGISTRY: Record<string, Record<string, GroundTruth>> = {
   "CSI-ENVIRONMENT-001": {
     "1.0.0": CSI_ENVIRONMENT_GROUND_TRUTH_V1,
     "1.1.0": CSI_ENVIRONMENT_GROUND_TRUTH_V1_1,
+    "1.2.0": CSI_ENVIRONMENT_GROUND_TRUTH_V1_2,
   },
 };
+
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_6 } from "./data/csiEnvironment.v1_6.ts";
+import { CSI_ENVIRONMENT_SCORING_RULES_V1_7 } from "./data/csiEnvironment.v1_7.ts";
 
 const SCORING_RULES_REGISTRY: Record<string, Record<string, ScoringRules>> = {
   "CSI-ENVIRONMENT-001": {
@@ -30,6 +36,8 @@ const SCORING_RULES_REGISTRY: Record<string, Record<string, ScoringRules>> = {
     "1.3.0": CSI_ENVIRONMENT_SCORING_RULES_V1_3,
     "1.4.0": CSI_ENVIRONMENT_SCORING_RULES_V1_4,
     "1.5.0": CSI_ENVIRONMENT_SCORING_RULES_V1_5,
+    "1.6.0": CSI_ENVIRONMENT_SCORING_RULES_V1_6,
+    "1.7.0": CSI_ENVIRONMENT_SCORING_RULES_V1_7,
   },
 };
 

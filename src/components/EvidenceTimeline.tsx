@@ -1,5 +1,6 @@
 // src/components/EvidenceTimeline.tsx
 import { Check, X, TriangleAlert, FileText } from "lucide-react";
+import { evidenceText } from "@/lib/evidenceDisplay";
 import type { EvidenceEvent } from "@/lib/types";
 
 type Role = "success" | "danger" | "warning" | "neutral";
@@ -96,8 +97,8 @@ export function EvidenceTimeline({ events }: { events: EvidenceEvent[] }) {
               <div className={`flex flex-1 items-start justify-between gap-3 ${isLast ? "" : "pb-3.5"}`}>
                 <div className="min-w-0">
                   <div className="text-[13px] leading-tight text-ink">
-                    <span className="font-semibold">{event.action}</span>
-                    <span className="text-ink-muted"> · {event.item}</span>
+                    <span className="font-semibold">{evidenceText(event.action)}</span>
+                    <span className="text-ink-muted"> · {evidenceText(event.item)}</span>
                   </div>
                   <div className="mt-1 flex items-center gap-2">
                     <span
@@ -106,7 +107,7 @@ export function EvidenceTimeline({ events }: { events: EvidenceEvent[] }) {
                       {badge}
                     </span>
                     {event.note && (
-                      <span className="text-[11.5px] text-ink-muted">{event.note}</span>
+                      <span className="text-[11.5px] text-ink-muted">{evidenceText(event.note)}</span>
                     )}
                   </div>
                 </div>

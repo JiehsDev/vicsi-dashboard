@@ -1,6 +1,10 @@
 // src/lib/results.ts
 import "server-only";
+import { buildAssessmentPresentation } from "./assessmentPresentation.ts";
+import type { AssessmentPresentation } from "./assessmentPresentation.ts";
+import { countVersionedContent } from "./versionedContentCounts";
 import { createSupabaseServerClient } from "./supabaseServer";
+import {scenarioTitle} from "./scenarioMetadata.ts";
 
 /** All reads below use the SESSION-COOKIE-SCOPED client (RLS sees the
  *  caller as `authenticated`), never the service-role client - the actual
@@ -11,17 +15,18 @@ import { createSupabaseServerClient } from "./supabaseServer";
  *  cannot leak a row RLS wouldn't already have returned. */
 
 const SESSION_SELECT = `
-  session_id, receipt_id, scenario_id, scenario_version,
+  session_id, receipt_id, scenario_id, scenario_version, ground_truth_version, scoring_rules_version,
   started_at_utc, completed_at_utc, duration_seconds,
   selected_conclusion_id, resolved_ending_id,
   has_client_reported_scores, client_relationships_correct, client_relationships_incorrect,
   client_objectives_completed, client_objectives_failed, client_procedural_violation_count,
   verification_status, verified_score, verification_message, verified_at_utc,
-  server_received_at_utc, student_id, class_id,
+  server_received_at_utc, student_id, class_id, is_test_session,
   scenarios(display_name)
 `;
 
 export interface ResultSummary {
+  isTestSession?: boolean;
   sessionId: string;
   receiptId: string;
   studentId: string;
@@ -29,6 +34,8 @@ export interface ResultSummary {
   scenarioId: string;
   scenarioDisplayName: string;
   scenarioVersion: string;
+  scoringVersion?: string | null;
+  groundTruthVersion?: string | null;
   startedAtUtc: string | null;
   completedAtUtc: string | null;
   durationSeconds: number | null;
@@ -44,9 +51,13 @@ export interface ResultSummary {
    *  in, so a list that hasn't computed these yet doesn't render a false "0". */
   confirmedFindingCount?: number;
   completedRelationshipCount?: number;
+  assessmentComponents?: Record<string, number>;
+  trainingCompletion?: string;
 }
 
 export interface ResultDetail extends ResultSummary {
+  recordedReportLines?:Array<{subjectId:string;statementId:string}>;
+  assessment?: AssessmentPresentation;
   verificationMessage: string | null;
   verifiedAtUtc: string | null;
   clientReported: {
@@ -68,7 +79,7 @@ export interface ResultDetail extends ResultSummary {
   relationships: { relationshipId: string; state: string; wasEverSelected: boolean }[];
   /** Ordered event log exactly as Unity submitted it — the session's own
    *  recorded actions, not an answer key. */
-  events: { sequenceNumber: number; timestampMs: number; eventType: string; targetId: string | null }[];
+  events: { sequenceNumber: number; timestampMs: number; eventType: string; targetId: string | null; payload?: {key:string;value:string}[] }[];
   /** Every evidence item's full server-recorded result, not just the
    *  filtered-to-missed subset `missedEvidence` above shows a student/
    *  instructor day-to-day. Used by the per-session export (Part 5), which
@@ -101,13 +112,16 @@ export interface ResultDetail extends ResultSummary {
 function mapSummaryRow(row: Record<string, unknown>): ResultSummary {
   const scenario = Array.isArray(row.scenarios) ? row.scenarios[0] : row.scenarios;
   return {
+    isTestSession: row.is_test_session === true,
     sessionId: row.session_id as string,
     receiptId: row.receipt_id as string,
     studentId: row.student_id as string,
     classId: row.class_id as string,
     scenarioId: row.scenario_id as string,
-    scenarioDisplayName: (scenario as { display_name?: string } | null)?.display_name ?? (row.scenario_id as string),
+    scenarioDisplayName: scenarioTitle(row.scenario_id as string,row.scenario_version as string,row.ground_truth_version as string|null,(scenario as { display_name?: string } | null)?.display_name ?? (row.scenario_id as string)),
     scenarioVersion: row.scenario_version as string,
+    scoringVersion: row.scoring_rules_version as string | null,
+    groundTruthVersion: row.ground_truth_version as string | null,
     startedAtUtc: row.started_at_utc as string | null,
     completedAtUtc: row.completed_at_utc as string | null,
     durationSeconds: row.duration_seconds as number | null,
@@ -119,37 +133,21 @@ function mapSummaryRow(row: Record<string, unknown>): ResultSummary {
   };
 }
 
-/** Bulk-fetches confirmedFindingCount/completedRelationshipCount for every
- *  session in `rows` and merges them in, mutating nothing — one query per
- *  count (not one per session), same shape getInstructorOverview's own
- *  bulk-fetch-then-Map aggregation already uses. RLS on session_findings/
- *  session_relationships (010/017) already scopes these to rows the caller
- *  could see anyway, same as every other child-table read in this file. */
-async function mergeReasoningCounts<T extends ResultSummary>(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  rows: T[],
-): Promise<T[]> {
-  if (rows.length === 0) return rows;
-  const sessionIds = rows.map((r) => r.sessionId);
-
-  const [{ data: findingRows, error: findingError }, { data: relationshipRows, error: relationshipError }] = await Promise.all([
-    supabase.from("session_findings").select("session_id").in("session_id", sessionIds),
-    supabase.from("session_relationships").select("session_id").eq("state", "Completed").in("session_id", sessionIds),
-  ]);
-  if (findingError) console.warn("[results] mergeReasoningCounts session_findings failed (migration 017 applied?):", findingError.message);
-  if (relationshipError) console.warn("[results] mergeReasoningCounts session_relationships failed:", relationshipError.message);
-
-  const findingCounts = new Map<string, number>();
-  for (const f of findingRows ?? []) findingCounts.set(f.session_id, (findingCounts.get(f.session_id) ?? 0) + 1);
-
-  const relationshipCounts = new Map<string, number>();
-  for (const r of relationshipRows ?? []) relationshipCounts.set(r.session_id, (relationshipCounts.get(r.session_id) ?? 0) + 1);
-
-  return rows.map((r) => ({
-    ...r,
-    confirmedFindingCount: findingCounts.get(r.sessionId) ?? 0,
-    completedRelationshipCount: relationshipCounts.get(r.sessionId) ?? 0,
-  }));
+/** Fetch only the stored authoritative deduction values needed by session
+ * lists. Reads remain scoped to the caller through the existing RLS client. */
+async function mergeDeductionComponents<T extends ResultSummary>(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, rows:T[],
+):Promise<T[]> {
+  if(!rows.length)return rows;
+  if(rows.length>80){const result:T[]=[];for(let i=0;i<rows.length;i+=80)result.push(...await mergeDeductionComponents(supabase,rows.slice(i,i+80)));return result;}
+  const {data,error}=await supabase.from("session_score_categories")
+    .select("session_id,category_key,category_value").eq("source","server")
+    .in("session_id",rows.map(r=>r.sessionId))
+    .in("category_key",["reasoningCheckpointComponent","deductionRelationshipComponent","finalConclusionComponent","deductionAssessmentComplete","deductionTotalScore"]);
+  if(error)throw new Error("Unable to load deduction results.");
+  const values=new Map<string,Record<string,number>>();
+  for(const row of data??[]){const v=values.get(row.session_id)??{};v[row.category_key]=row.category_value;values.set(row.session_id,v);}
+  return rows.map(r=>({...r,assessmentComponents:values.get(r.sessionId)}));
 }
 
 /** Every session belonging to the signed-in student, newest first. RLS
@@ -157,16 +155,14 @@ async function mergeReasoningCounts<T extends ResultSummary>(
  *  no student_id filter is applied here in application code. */
 export async function getMyResultSummaries(): Promise<ResultSummary[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("assessment_sessions")
-    .select(SESSION_SELECT)
-    .order("server_received_at_utc", { ascending: false });
-
-  if (error) {
-    console.warn("[results] getMyResultSummaries failed:", error.message);
-    return [];
+  const rows:ResultSummary[]=[];
+  for(let from=0;;from+=1000){
+    const {data,error}=await supabase.from("assessment_sessions").select(SESSION_SELECT).order("server_received_at_utc",{ascending:false}).order("session_id").range(from,from+999);
+    if(error)throw new Error("Unable to load investigation attempts.");
+    rows.push(...(data??[]).map(mapSummaryRow));
+    if(!data||data.length<1000)break;
   }
-  return mergeReasoningCounts(supabase, (data ?? []).map(mapSummaryRow));
+  return mergeDeductionComponents(supabase, rows);
 }
 
 /** Every session across every class the signed-in instructor teaches,
@@ -185,17 +181,14 @@ export interface InstructorResultRow extends ResultSummary {
 
 export async function getInstructorResultSummaries(): Promise<InstructorResultRow[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("assessment_sessions")
-    .select(`${SESSION_SELECT}, profiles!assessment_sessions_student_id_fkey(full_name, student_id), classes(name, section)`)
-    .order("server_received_at_utc", { ascending: false });
-
-  if (error) {
-    console.warn("[results] getInstructorResultSummaries failed:", error.message);
-    return [];
+  const rows:InstructorResultRow[]=[];
+  for(let from=0;;from+=1000){
+    const {data,error}=await supabase.from("assessment_sessions").select(`${SESSION_SELECT}, profiles!assessment_sessions_student_id_fkey(full_name, student_id), classes(name, section)`).order("server_received_at_utc",{ascending:false}).order("session_id").range(from,from+999);
+    if(error)throw new Error("Unable to load class investigation attempts.");
+    rows.push(...(data??[]).map(mapInstructorRow));
+    if(!data||data.length<1000)break;
   }
-
-  return mergeReasoningCounts(supabase, (data ?? []).map(mapInstructorRow));
+  return mergeDeductionComponents(supabase, rows);
 }
 
 function mapInstructorRow(row: Record<string, unknown>): InstructorResultRow {
@@ -243,7 +236,17 @@ export async function getInstructorSessionIdentity(
  *  callers must render that as "not found," never distinguish "doesn't
  *  exist" from "exists but not yours" (same safe-generic principle the
  *  pairing endpoints already follow). */
-export async function getResultDetail(sessionId: string): Promise<ResultDetail | null> {
+async function readSessionEvents(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, sessionId: string) {
+  const rows: Array<{sequence_number:number;timestamp_ms:number;event_type:string;target_id:string|null;payload:unknown}> = [];
+  for (let from = 0; ; from += 1000) {
+    const {data, error} = await supabase.from("session_events").select("sequence_number, timestamp_ms, event_type, target_id, payload").eq("session_id",sessionId).order("sequence_number").range(from,from+999);
+    if (error) throw new Error("Unable to load session event history.");
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) return {data:rows};
+  }
+}
+
+export async function getResultDetail(sessionId: string, options:{educationalOnly?:boolean} = {}): Promise<ResultDetail | null> {
   const supabase = await createSupabaseServerClient();
 
   const { data: session, error: sessionError } = await supabase
@@ -265,11 +268,11 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
     { data: insightRows, error: insightError },
   ] = await Promise.all([
     supabase.from("session_score_categories").select("category_key, category_value, source").eq("session_id", sessionId).eq("source", "server"),
-    supabase.from("session_procedure_violations").select("event_type, target_id, timestamp_ms").eq("session_id", sessionId),
-    supabase.from("session_evidence_results").select("evidence_id, final_status, swabbing_done, fingerprinting_done, is_flipped, fingerprint_lab_status, tent_number, tent_letter").eq("session_id", sessionId),
-    supabase.from("session_relationships").select("relationship_id, state, was_ever_selected").eq("session_id", sessionId),
-    supabase.from("session_events").select("sequence_number, timestamp_ms, event_type, target_id").eq("session_id", sessionId).order("sequence_number", { ascending: true }),
-    supabase.from("session_hypotheses").select("checkpoint_id, selected_option_id, reasoning_option_id").eq("session_id", sessionId),
+    options.educationalOnly ? Promise.resolve({data:[],error:null}) : supabase.from("session_procedure_violations").select("event_type, target_id, timestamp_ms").eq("session_id", sessionId),
+    options.educationalOnly ? Promise.resolve({data:[],error:null}) : supabase.from("session_evidence_results").select("evidence_id, final_status, swabbing_done, fingerprinting_done, is_flipped, fingerprint_lab_status, tent_number, tent_letter").eq("session_id", sessionId),
+    options.educationalOnly ? Promise.resolve({data:[],error:null}) : supabase.from("session_relationships").select("relationship_id, state, was_ever_selected").eq("session_id", sessionId),
+    readSessionEvents(supabase, sessionId),
+    options.educationalOnly && session.scoring_rules_version==="1.7.0" ? Promise.resolve({data:[],error:null}) : supabase.from("session_hypotheses").select("checkpoint_id, selected_option_id, reasoning_option_id").eq("session_id", sessionId),
     // Both tables added in 017_session_findings_insights.sql, after 009-016
     // shipped — a session's row here is simply absent (never an app-crashing
     // error) on any environment where that migration hasn't been applied
@@ -277,12 +280,16 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
     // already established (see BUSINESS_RULES.md §8.2). The error is still
     // captured (not swallowed by `{ data }`-only destructuring) so a genuine
     // failure is at least logged once below, distinct from "just not migrated yet".
-    supabase.from("session_findings").select("finding_id").eq("session_id", sessionId),
-    supabase.from("session_insights").select("insight_id").eq("session_id", sessionId),
+    options.educationalOnly ? Promise.resolve({data:[],error:null}) : supabase.from("session_findings").select("finding_id").eq("session_id", sessionId),
+    options.educationalOnly ? Promise.resolve({data:[],error:null}) : supabase.from("session_insights").select("insight_id").eq("session_id", sessionId),
   ]);
 
   if (findingError) console.warn("[results] session_findings query failed (migration 017 applied?):", findingError.message);
   if (insightError) console.warn("[results] session_insights query failed (migration 017 applied?):", insightError.message);
+  // Older uploads can contain original Recorder rows without a raw Recorder event.
+  // Keep this read RLS-scoped, and never infer new scoring data from these IDs.
+  const {data:originalReportRows}=(eventRows??[]).some(e=>e.event_type==="ReportLinesSelected")
+    ?{data:[]}:await supabase.from("session_report_lines").select("evidence_id,line_id").eq("session_id",sessionId);
 
   const categories: Record<string, number> = {};
   for (const row of categoryRows ?? []) {
@@ -295,10 +302,10 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
   // kind of "hidden answer" this feature says not to expose while an
   // assignment is still active.
   const missedEvidence = (evidenceRows ?? [])
-    .filter((r) => r.final_status !== "Processed")
+    .filter((r) => r.final_status !== "Processed" && !(session.scoring_rules_version === "1.7.0" && r.evidence_id === "BODY-A" && r.final_status === "Logged"))
     .map((r) => ({ evidenceId: r.evidence_id, finalStatus: r.final_status }));
 
-  return {
+  const result: ResultDetail = {
     ...mapSummaryRow(session),
     verificationMessage: session.verification_message as string | null,
     verifiedAtUtc: session.verified_at_utc as string | null,
@@ -311,6 +318,7 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
       proceduralViolationCount: session.client_procedural_violation_count as number | null,
     },
     categories,
+    recordedReportLines:(originalReportRows??[]).map(r=>({subjectId:r.evidence_id,statementId:r.line_id})),
     procedureViolations: (violationRows ?? []).map((v) => ({ eventType: v.event_type, targetId: v.target_id, timestampMs: Number(v.timestamp_ms) })),
     missedEvidence,
     relationships: (relationshipRows ?? []).map((r) => ({
@@ -323,6 +331,7 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
       timestampMs: Number(e.timestamp_ms),
       eventType: e.event_type,
       targetId: e.target_id,
+      payload: Array.isArray(e.payload) ? e.payload : [],
     })),
     evidenceResults: (evidenceRows ?? []).map((r) => ({
       evidenceId: r.evidence_id,
@@ -342,6 +351,18 @@ export async function getResultDetail(sessionId: string): Promise<ResultDetail |
     confirmedFindingIds: (findingRows ?? []).map((f) => f.finding_id),
     unlockedInsightIds: (insightRows ?? []).map((i) => i.insight_id),
   };
+  if (!result.confirmedFindingIds.length) {
+    const frozen = result.events.find(e => e.eventType === "DeductionAssessmentSnapshot");
+    const raw = frozen?.payload?.find(p => p.key === "assessment")?.value;
+    try {
+      const snapshot: unknown = raw ? JSON.parse(raw) : null;
+      if (snapshot && typeof snapshot === "object" && "confirmedFindingIds" in snapshot && Array.isArray(snapshot.confirmedFindingIds)) {
+        result.confirmedFindingIds = snapshot.confirmedFindingIds.filter((id): id is string => typeof id === "string");
+      }
+    } catch { /* Historical or incomplete optional snapshot. */ }
+  }
+  if(!options.educationalOnly)result.assessment = buildAssessmentPresentation(result);
+  return result;
 }
 
 /** Options for the class-results filter UI. `classes` and `scenarios` both
@@ -374,6 +395,54 @@ export async function getInstructorFilterOptions(): Promise<{
   };
 }
 
+/** Bulk, paginated RLS reads for class analysis. No per-student request fan-out. */
+export async function getAnalyticsDetails(summaries: ResultSummary[]): Promise<ResultDetail[]> {
+  if (!summaries.length) return [];
+  const supabase = await createSupabaseServerClient();
+  const details: ResultDetail[] = [];
+  for (let offset = 0; offset < summaries.length; offset += 80) {
+    const batch = summaries.slice(offset, offset + 80), ids = batch.map(r => r.sessionId);
+    const read = async (table:string, columns:string) => {
+      const rows: Record<string,unknown>[] = [];
+      for (let from=0;;from+=1000) {
+        const uniqueOrder:Record<string,string>={session_events:"sequence_number",session_score_categories:"category_key",session_evidence_results:"evidence_id",session_procedure_violations:"timestamp_ms",session_relationships:"relationship_id"};
+        let query = supabase.from(table).select(columns).in("session_id",ids).order("session_id").order(uniqueOrder[table]);
+        if (table === "session_score_categories") query=query.order("source");
+        if (table === "session_procedure_violations") query=query.order("event_type").order("target_id");
+        const {data,error} = await query.range(from,from+999);
+        if (error) throw new Error(`Unable to load ${table} for analysis.`);
+        rows.push(...(data as unknown as Record<string,unknown>[] ?? []));
+        if (!data || data.length < 1000) return rows;
+      }
+    };
+    const [events,categories,evidence,notes,relationships] = await Promise.all([
+      read("session_events","session_id,sequence_number,timestamp_ms,event_type,target_id,payload"),
+      read("session_score_categories","session_id,category_key,category_value,source"),
+      read("session_evidence_results","session_id,evidence_id,final_status,swabbing_done,fingerprinting_done,is_flipped,fingerprint_lab_status,tent_number,tent_letter"),
+      read("session_procedure_violations","session_id,event_type,target_id,timestamp_ms"),
+      read("session_relationships","session_id,relationship_id,state,was_ever_selected"),
+    ]);
+    const group = (rows:Record<string,unknown>[]) => {
+      const grouped = new Map<string,Record<string,unknown>[]>();
+      for(const row of rows){const id=String(row.session_id);const list=grouped.get(id)??[];list.push(row);grouped.set(id,list);}return grouped;
+    };
+    const [ev,cat,ed,no,re] = [events,categories,evidence,notes,relationships].map(group);
+    for (const summary of batch) {
+      const id=summary.sessionId;
+      const detail:ResultDetail={...summary,verificationMessage:null,verifiedAtUtc:null,
+        clientReported:{hasScores:false,relationshipsCorrect:null,relationshipsIncorrect:null,objectivesCompleted:null,objectivesFailed:null,proceduralViolationCount:null},
+        categories:Object.fromEntries((cat.get(id)??[]).filter(r=>r.source==="server").map(r=>[String(r.category_key),Number(r.category_value)])),
+        events:(ev.get(id)??[]).map(r=>({sequenceNumber:Number(r.sequence_number),timestampMs:Number(r.timestamp_ms),eventType:String(r.event_type),targetId:r.target_id as string|null,payload:Array.isArray(r.payload)?r.payload:[]})).sort((a,b)=>a.sequenceNumber-b.sequenceNumber),
+        evidenceResults:(ed.get(id)??[]).map(r=>({evidenceId:String(r.evidence_id),finalStatus:String(r.final_status),swabbingDone:r.swabbing_done===true,fingerprintingDone:r.fingerprinting_done===true,isFlipped:r.is_flipped===true,fingerprintLabStatus:r.fingerprint_lab_status as string|null,tentNumber:r.tent_number as number|null,tentLetter:r.tent_letter as string|null})),
+        procedureViolations:(no.get(id)??[]).map(r=>({eventType:String(r.event_type),targetId:r.target_id as string|null,timestampMs:Number(r.timestamp_ms)})),
+        relationships:(re.get(id)??[]).map(r=>({relationshipId:String(r.relationship_id),state:String(r.state),wasEverSelected:r.was_ever_selected===true})),
+        missedEvidence:[],hypotheses:[],confirmedFindingIds:[],unlockedInsightIds:[]};
+      detail.assessment=buildAssessmentPresentation(detail);details.push(detail);
+    }
+  }
+  return details;
+}
+
 export interface InstructorOverview {
   totalClasses: number;
   totalStudents: number;
@@ -385,14 +454,14 @@ export interface InstructorOverview {
   averageDurationSeconds: number | null;
   mostMissedEvidence: { evidenceId: string; count: number }[];
   mostCommonViolations: { eventType: string; count: number }[];
-  endingDistribution: { endingId: string; count: number }[];
+  endingDistribution: { endingId: string; groundTruthVersion: string | null; count: number }[];
   /** Descriptive only — a count, not a judgment. See getInstructorOverview's
    *  own comment on why this reads session_findings directly rather than
    *  inferring "missed" findings (this project has no per-scenario "total
    *  findings" registry outside the Unity repo to compare against safely). */
-  mostCommonFindings: { findingId: string; count: number }[];
-  mostCommonRelationshipsCompleted: { relationshipId: string; count: number }[];
-  conclusionDistribution: { conclusionId: string; count: number }[];
+  mostCommonFindings: { findingId: string; groundTruthVersion: string | null; count: number }[];
+  mostCommonRelationshipsCompleted: { relationshipId: string; groundTruthVersion: string | null; count: number }[];
+  conclusionDistribution: { conclusionId: string; groundTruthVersion: string | null; count: number }[];
   /** Sessions whose selectedConclusionId is CONCLUSION-INCONCLUSIVE, divided
    *  by every session with a non-null selectedConclusionId — null if no
    *  session has one yet, same "don't fabricate a rate from zero data"
@@ -429,13 +498,13 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     supabase.from("classes").select("id"),
     supabase.from("class_enrollments").select("student_id"),
     supabase.from("assessment_assignments").select("id, scenario_id"),
-    supabase.from("assessment_sessions").select("session_id, verification_status, verified_score, duration_seconds, resolved_ending_id, selected_conclusion_id"),
+    supabase.from("assessment_sessions").select("session_id, ground_truth_version, verification_status, verified_score, duration_seconds, resolved_ending_id, selected_conclusion_id"),
     supabase.from("session_evidence_results").select("evidence_id, final_status"),
     supabase.from("session_procedure_violations").select("event_type"),
     // 017_session_findings_insights.sql — see getResultDetail's own comment on
     // why a missing-table error here degrades to an empty array, not a crash.
-    supabase.from("session_findings").select("finding_id"),
-    supabase.from("session_relationships").select("relationship_id").eq("state", "Completed"),
+    supabase.from("session_findings").select("session_id, finding_id"),
+    supabase.from("session_relationships").select("session_id, relationship_id").eq("state", "Completed"),
   ]);
 
   for (const [label, error] of [
@@ -455,10 +524,8 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
   const verified = sessions.filter((s) => s.verification_status === "verified" && s.verified_score !== null);
   const withDuration = sessions.filter((s) => s.duration_seconds !== null);
 
-  const endingCounts = new Map<string, number>();
-  for (const s of sessions) {
-    if (s.resolved_ending_id) endingCounts.set(s.resolved_ending_id, (endingCounts.get(s.resolved_ending_id) ?? 0) + 1);
-  }
+  const versions = new Map(sessions.map(s => [s.session_id, s.ground_truth_version]));
+  const endingCounts = countVersionedContent(sessions.filter(s => s.resolved_ending_id).map(s => ({ id: s.resolved_ending_id!, groundTruthVersion: s.ground_truth_version })));
 
   const missedCounts = new Map<string, number>();
   for (const e of evidenceRows ?? []) {
@@ -470,24 +537,15 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     violationCounts.set(v.event_type, (violationCounts.get(v.event_type) ?? 0) + 1);
   }
 
-  const findingCounts = new Map<string, number>();
-  for (const f of findingRows ?? []) {
-    findingCounts.set(f.finding_id, (findingCounts.get(f.finding_id) ?? 0) + 1);
-  }
-
-  const relationshipCounts = new Map<string, number>();
-  for (const r of completedRelationshipRows ?? []) {
-    relationshipCounts.set(r.relationship_id, (relationshipCounts.get(r.relationship_id) ?? 0) + 1);
-  }
-
-  const conclusionCounts = new Map<string, number>();
+  const findingCounts = countVersionedContent((findingRows ?? []).map(f => ({ id: f.finding_id, groundTruthVersion: versions.get(f.session_id) })), 5);
+  const relationshipCounts = countVersionedContent((completedRelationshipRows ?? []).map(r => ({ id: r.relationship_id, groundTruthVersion: versions.get(r.session_id) })), 5);
+  const conclusionCounts = countVersionedContent(sessions.filter(s => s.selected_conclusion_id).map(s => ({ id: s.selected_conclusion_id!, groundTruthVersion: s.ground_truth_version })));
   let sessionsWithConclusion = 0;
   let inconclusiveSessions = 0;
   for (const s of sessions) {
     const conclusionId = (s as { selected_conclusion_id?: string | null }).selected_conclusion_id;
     if (!conclusionId) continue;
     sessionsWithConclusion++;
-    conclusionCounts.set(conclusionId, (conclusionCounts.get(conclusionId) ?? 0) + 1);
     if (conclusionId === "CONCLUSION-INCONCLUSIVE" || conclusionId === "conclusion-inconclusive") {
       inconclusiveSessions++;
     }
@@ -504,10 +562,10 @@ export async function getInstructorOverview(): Promise<InstructorOverview> {
     averageDurationSeconds: withDuration.length > 0 ? withDuration.reduce((sum, s) => sum + (s.duration_seconds as number), 0) / withDuration.length : null,
     mostMissedEvidence: topEntries(missedCounts).map(({ key, count }) => ({ evidenceId: key, count })),
     mostCommonViolations: topEntries(violationCounts).map(({ key, count }) => ({ eventType: key, count })),
-    endingDistribution: [...endingCounts.entries()].sort((a, b) => b[1] - a[1]).map(([endingId, count]) => ({ endingId, count })),
-    mostCommonFindings: topEntries(findingCounts).map(({ key, count }) => ({ findingId: key, count })),
-    mostCommonRelationshipsCompleted: topEntries(relationshipCounts).map(({ key, count }) => ({ relationshipId: key, count })),
-    conclusionDistribution: [...conclusionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([conclusionId, count]) => ({ conclusionId, count })),
+    endingDistribution: endingCounts.map(({ id, ...rest }) => ({ endingId: id, ...rest })),
+    mostCommonFindings: findingCounts.map(({ id, ...rest }) => ({ findingId: id, ...rest })),
+    mostCommonRelationshipsCompleted: relationshipCounts.map(({ id, ...rest }) => ({ relationshipId: id, ...rest })),
+    conclusionDistribution: conclusionCounts.map(({ id, ...rest }) => ({ conclusionId: id, ...rest })),
     inconclusiveRate: sessionsWithConclusion > 0 ? inconclusiveSessions / sessionsWithConclusion : null,
   };
 }
@@ -531,6 +589,8 @@ export async function getInstructorStudentSessions(studentId: string) {
  *  exactly as the page shows them). All string values as read from
  *  searchParams/URL query params - `undefined`/empty means "no filter". */
 export interface ResultFilters {
+  scoringVersion?: string;
+  includeTests?: boolean;
   classId?: string;
   scenarioId?: string;
   status?: string;
@@ -560,10 +620,11 @@ export function validateDateRange(dateFromRaw?: string, dateToRaw?: string): Dat
   const dateFrom = dateFromRaw?.trim() || undefined;
   const dateTo = dateToRaw?.trim() || undefined;
 
-  if (dateFrom && (!DATE_ONLY_PATTERN.test(dateFrom) || Number.isNaN(Date.parse(dateFrom)))) {
+  const validDate = (value:string) => DATE_ONLY_PATTERN.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+  if (dateFrom && !validDate(dateFrom)) {
     return { dateFrom: undefined, dateTo, error: `"${dateFrom}" isn't a valid date (expected YYYY-MM-DD).` };
   }
-  if (dateTo && (!DATE_ONLY_PATTERN.test(dateTo) || Number.isNaN(Date.parse(dateTo)))) {
+  if (dateTo && !validDate(dateTo)) {
     return { dateFrom, dateTo: undefined, error: `"${dateTo}" isn't a valid date (expected YYYY-MM-DD).` };
   }
   if (dateFrom && dateTo && dateFrom > dateTo) {
@@ -577,16 +638,19 @@ export function validateDateRange(dateFromRaw?: string, dateToRaw?: string): Dat
  *  with no completedAtUtc (still in progress) never matches an active date
  *  filter, which is the honest behavior (it doesn't have a completion date
  *  to be "in range"). */
-export function applyResultFilters<T extends InstructorResultRow>(results: T[], filters: ResultFilters): T[] {
+export function applyResultFilters<T extends ResultSummary & {studentDisplayName?: string; studentIdCode?: string | null}>(results: T[], filters: ResultFilters): T[] {
   const q = filters.q?.trim().toLowerCase();
-  const { dateFrom, dateTo } = validateDateRange(filters.dateFrom, filters.dateTo);
+  const { dateFrom, dateTo, error } = validateDateRange(filters.dateFrom, filters.dateTo);
+  if (error) return [];
 
   return results.filter((r) => {
+    if (!filters.includeTests && r.isTestSession) return false;
+    if (filters.scoringVersion && r.scoringVersion !== filters.scoringVersion) return false;
     if (filters.classId && r.classId !== filters.classId) return false;
     if (filters.scenarioId && r.scenarioId !== filters.scenarioId) return false;
     if (filters.status && r.verificationStatus !== filters.status) return false;
     if (q) {
-      const matchesName = r.studentDisplayName.toLowerCase().includes(q);
+      const matchesName = (r.studentDisplayName ?? r.scenarioDisplayName).toLowerCase().includes(q);
       const matchesId = r.studentIdCode?.toLowerCase().includes(q) ?? false;
       if (!matchesName && !matchesId) return false;
     }

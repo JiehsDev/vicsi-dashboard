@@ -1,0 +1,244 @@
+import "server-only";
+import type { GroundTruth } from "../types.ts";
+
+// Append-only The Last Drink key. BODY-A is documented in place, outside collectible recall.
+// Peter/unsupported and Paul/premature pairs receive zero conclusion credit through
+// the existing version-independent exact-pair scorer; historical keys are untouched.
+export const CSI_ENVIRONMENT_GROUND_TRUTH_V1_2: GroundTruth = {
+  "scenarioId": "CSI-ENVIRONMENT-001",
+  "generatedAt": "2026-10-08T00:00:00Z",
+  "lifecycleSequence": [
+    "NotFound",
+    "Found",
+    "PhotographedRaw",
+    "ChalkMarked",
+    "Marked",
+    "PhotographedFinal",
+    "Logged",
+    "ReadyForCollection",
+    "Collected",
+    "Sealed",
+    "Processed"
+  ],
+  "evidence": [
+    {
+      "evidenceId": "EVD-014",
+      "relevance": "Critical"
+    },
+    {
+      "evidenceId": "EVD-015",
+      "relevance": "Critical"
+    },
+    {
+      "evidenceId": "EVD-018",
+      "relevance": "Relevant"
+    }
+  ],
+  "hypothesisCheckpoints": [
+    {
+      "id": "HYP-01",
+      "reasoningOptions": [
+        {
+          "id": "hyp01-peter-departure-proves-guilt",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp01-paul-argument-proves-guilt",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp01-evidence-not-yet-developed",
+          "isCorrect": true
+        },
+        {
+          "id": "hyp01-drinking-explains-attack",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "HYP-02",
+      "reasoningOptions": [
+        {
+          "id": "hyp02-print-proves-attacker",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp02-bottle-intoxication",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp02-print-needs-reconstruction",
+          "isCorrect": true
+        },
+        {
+          "id": "hyp02-knife-routine-use",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "HYP-03",
+      "reasoningOptions": [
+        {
+          "id": "hyp03-knife-print-implicates-brother",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp03-wound-alone",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp03-bottle-premature-closure",
+          "isCorrect": false
+        },
+        {
+          "id": "hyp03-combined-physical-evidence",
+          "isCorrect": true
+        },
+        {
+          "id": "hyp03-no-contradicting-evidence",
+          "isCorrect": false
+        }
+      ]
+    }
+  ],
+  "evidenceReportLines": [
+    {
+      "evidenceId": "BODY-A",
+      "reportLineOptions": [
+        {
+          "id": "body-a-location",
+          "isAccurate": true
+        },
+        {
+          "id": "body-a-position",
+          "isAccurate": true
+        },
+        {
+          "id": "body-a-wound-sharp-object",
+          "isAccurate": true
+        }
+      ]
+    },
+    {
+      "evidenceId": "EVD-014",
+      "reportLineOptions": [
+        {
+          "id": "knife-blade-length",
+          "isAccurate": true
+        },
+        {
+          "id": "knife-blood-trace",
+          "isAccurate": true
+        },
+        {
+          "id": "knife-location",
+          "isAccurate": true
+        },
+        {
+          "id": "knife-print-on-handle",
+          "isAccurate": true
+        },
+        {
+          "id": "knife-owner-speculation",
+          "isAccurate": true
+        },
+        {
+          "id": "knife-conclusion-weapon",
+          "isAccurate": false
+        },
+        {
+          "id": "knife-wound-match",
+          "isAccurate": true
+        }
+      ]
+    },
+    {
+      "evidenceId": "EVD-015",
+      "reportLineOptions": [
+        {
+          "id": "blood-spatter-location",
+          "isAccurate": true
+        },
+        {
+          "id": "blood-spatter-droplet-pattern",
+          "isAccurate": true
+        },
+        {
+          "id": "blood-spatter-swab-collection",
+          "isAccurate": true
+        },
+        {
+          "id": "blood-spatter-mechanism-only",
+          "isAccurate": true
+        },
+        {
+          "id": "blood-spatter-fall-confirmed",
+          "isAccurate": false
+        },
+        {
+          "id": "blood-spatter-identity-assumed",
+          "isAccurate": false
+        }
+      ]
+    },
+    {
+      "evidenceId": "EVD-018",
+      "reportLineOptions": [
+        {
+          "id": "bottle-location",
+          "isAccurate": true
+        },
+        {
+          "id": "bottle-first-encountered",
+          "isAccurate": true
+        },
+        {
+          "id": "bottle-standard-procedure",
+          "isAccurate": true
+        },
+        {
+          "id": "bottle-fingerprint-pending",
+          "isAccurate": true
+        },
+        {
+          "id": "bottle-intoxication-explains-fall",
+          "isAccurate": false
+        },
+        {
+          "id": "bottle-recent-drinking-assumed",
+          "isAccurate": false
+        }
+      ]
+    }
+  ],
+  "scenarioVersion": "1.1.0",
+  "groundTruthVersion": "1.2.0",
+  "relationships": [
+    {
+      "relationshipId": "REL-bottle-supports-brother",
+      "scoreWeight": 1
+    },
+    {
+      "relationshipId": "REL-knife-consistent-wound",
+      "scoreWeight": 1
+    },
+    {
+      "relationshipId": "REL-paul-print-handled-knife",
+      "scoreWeight": 1
+    },
+    {
+      "relationshipId": "REL-peter-departure-supported",
+      "scoreWeight": 1
+    },
+    {
+      "relationshipId": "REL-spatter-consistent-reconstruction",
+      "scoreWeight": 1
+    }
+  ],
+  "conclusion": {
+    "correctConclusionId": "conclusion-brother",
+    "correctEndingId": "ending-brother-accused"
+  }
+};

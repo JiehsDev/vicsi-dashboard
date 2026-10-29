@@ -1,3 +1,5 @@
+import { evidenceLabel } from "./evidenceDisplay.ts";
+import { LAST_DRINK_CONTENT } from "./scenarioContent.v1_2.ts";
 // src/lib/scenarioContent.ts
 //
 // CENTRALIZED, ISOLATED ID -> DISPLAY-NAME RESOLVER for the ViCSI reasoning
@@ -235,14 +237,7 @@ const RELATIONSHIPS: Record<string, string> = {
   "REL-bottle-supports-brother": "Bottle Supports Brother's Account",
 };
 
-const EVIDENCE: Record<string, string> = {
-  "EVD-014": "Kitchen knife",
-  "EVD-015": "Blood spatter pattern",
-  "EVD-017": "Victim's mobile phone",
-  "EVD-018": "Empty liquor bottle",
-  "EVD-019": "Disposable gloves",
-  "BODY-A": "Victim's body",
-};
+
 
 /** Turns an unrecognized id into a readable-enough fallback instead of
  *  showing the raw string verbatim or crashing — e.g. "CONCLUSION-FOO-BAR"
@@ -258,28 +253,48 @@ function resolveUnknown(id: string, stripPrefix?: RegExp): string {
     .join(" ");
 }
 
-export function resolveFindingName(id: string): string {
+export function resolveFindingName(id: string, groundTruthVersion?: string | null): string {
+  if (groundTruthVersion === "1.2.0") {
+    const entry = LAST_DRINK_CONTENT.findings[id];
+    if (entry) return entry.displayName;
+  }
   return FINDINGS[id]?.displayName ?? resolveUnknown(id, /^FIND-/);
 }
 
-export function resolveInsight(id: string): InsightContent {
+export function resolveInsight(id: string, groundTruthVersion?: string | null): InsightContent {
+  if (groundTruthVersion === "1.2.0") {
+    const entry = LAST_DRINK_CONTENT.insights[id];
+    if (entry) return entry;
+  }
   return INSIGHTS[id] ?? { displayName: resolveUnknown(id, /^INSIGHT-/), description: "" };
 }
 
-export function resolveConclusion(id: string): ConclusionContent {
-  return CONCLUSIONS[id] ?? { displayName: resolveUnknown(id, /^CONCLUSION-/), description: "", level: "Case" };
+export function resolveConclusion(id: string, groundTruthVersion?: string | null): ConclusionContent {
+  if (groundTruthVersion === "1.2.0") {
+    const entry = LAST_DRINK_CONTENT.conclusions[id];
+    if (entry) return entry;
+  }
+  return CONCLUSIONS[id] ?? (id === "conclusion-peter" ? LAST_DRINK_CONTENT.conclusions[id] : undefined) ?? { displayName: resolveUnknown(id, /^CONCLUSION-/), description: "", level: "Case" };
 }
 
-export function resolveEndingTitle(id: string): string {
-  return ENDINGS[id]?.title ?? resolveUnknown(id, /^ending-/i);
+export function resolveEndingTitle(id: string, groundTruthVersion?: string | null): string {
+  if (groundTruthVersion === "1.2.0") {
+    const entry = LAST_DRINK_CONTENT.endings[id];
+    if (entry) return entry.title;
+  }
+  return ENDINGS[id]?.title ?? (id === "ending-peter-unsupported" ? LAST_DRINK_CONTENT.endings[id]?.title : undefined) ?? resolveUnknown(id, /^ending-/i);
 }
 
-export function resolveRelationshipName(id: string): string {
+export function resolveRelationshipName(id: string, groundTruthVersion?: string | null): string {
+  if (groundTruthVersion === "1.2.0") {
+    const entry = LAST_DRINK_CONTENT.relationships[id];
+    if (entry) return entry;
+  }
   return RELATIONSHIPS[id] ?? resolveUnknown(id, /^REL-/);
 }
 
 export function resolveEvidenceName(id: string): string {
-  return EVIDENCE[id] ?? resolveUnknown(id);
+  return evidenceLabel(id, /^EVD-\d+$/.test(id) ? "Unrecognized evidence" : resolveUnknown(id));
 }
 
 /** True for the internal dev/smoke-test finding — see FINDINGS' own comment.

@@ -145,7 +145,7 @@ function CenteredCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-[420px] rounded-2xl border border-border bg-surface px-9 py-10 text-center shadow-[0_20px_60px_-20px_rgba(24,24,21,0.20)]">
-        <div className="text-[22px] font-bold tracking-tight text-ink">TRACEBOARD</div>
+        <div className="text-[22px] font-bold tracking-tight text-ink">ViCSI</div>
         <div className="mt-3">{children}</div>
       </div>
     </div>

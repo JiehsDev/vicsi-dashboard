@@ -6,9 +6,9 @@ import { signIn } from "./actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; created?: string }>;
+  searchParams: Promise<{ error?: string; created?: string; expired?: string }>;
 }) {
-  const { error, created } = await searchParams;
+  const { error, created, expired } = await searchParams;
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 lg:p-12">
@@ -20,7 +20,7 @@ export default async function LoginPage({
               <Fingerprint size={22} strokeWidth={1.75} />
             </div>
             <div className="text-[26px] font-bold leading-tight tracking-tight text-ink">
-              TRACEBOARD
+              ViCSI
             </div>
             <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
               VR-CSI Case Analytics — Partido State University, Lagonoy
@@ -31,7 +31,7 @@ export default async function LoginPage({
           <div className="relative mt-10 flex items-start gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3 text-[12px] leading-relaxed text-ink-muted">
             <Gamepad2 size={16} className="mt-0.5 flex-shrink-0 text-primary" />
             <span>
-              Playing in the VR headset? You don't need to sign in here —
+              Playing in the VR headset? You don&apos;t need to sign in here —
               just enter your Student ID and 4-digit PIN in the game.
             </span>
           </div>
@@ -45,6 +45,11 @@ export default async function LoginPage({
               Enter your credentials to continue.
             </div>
 
+            {expired && (
+              <div role="status" className="mb-5 rounded-xl border border-border bg-surface-tint px-4 py-3 text-[12.5px] text-ink-muted">
+                Your session has expired. Please sign in again.
+              </div>
+            )}
             {created && (
               <div className="mb-5 rounded-xl border border-good/20 bg-good/10 px-4 py-3 text-[12.5px] text-good">
                 Account created — sign in with your Student ID and password.

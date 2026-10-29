@@ -63,7 +63,15 @@ export function scoreMeasurement(
   events: ScoringSessionEvent[],
   rules: MeasurementScoringRules | undefined,
 ): MeasurementScoreOutput {
-  const requirements = (rules?.requirements ?? []).filter((r) => r.required !== false);
+  // Geometry selection is explicit and independent of the deduction formula.
+  // Never use client-provided expected distances or silently reinterpret old sessions.
+  const layouts = new Set(events.filter(e => e.eventType === "MeasurementTaken")
+    .map(e => payloadValue(e, "layoutId") ?? ""));
+  if (layouts.size > 1) return { items: [] }; // mixed/incomplete geometry declarations
+  const layoutId = layouts.values().next().value as string | undefined;
+  const registered = layoutId ? rules?.layoutProfiles?.[layoutId] : rules?.requirements;
+  if (layoutId && !registered) return { items: [] }; // unavailable, never judged against another house
+  const requirements = (registered ?? []).filter((r) => r.required !== false);
   if (requirements.length === 0) {
     return { items: [] };
   }

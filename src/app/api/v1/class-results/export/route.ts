@@ -14,6 +14,7 @@ import { getMyProfile } from "@/lib/supabaseClient";
 import { getInstructorResultSummaries, applyResultFilters, validateDateRange, type ResultFilters } from "@/lib/results";
 import { apiError } from "@/lib/apiResponse";
 import { buildCsv } from "@/lib/csv";
+import { deductionExportColumns } from "@/lib/resultExport";
 
 const CSV_COLUMNS = [
   "studentDisplayName",
@@ -28,6 +29,13 @@ const CSV_COLUMNS = [
   "resolvedEndingId",
   "verificationStatus",
   "verifiedScore",
+  "scoringVersion",
+  "groundTruthVersion",
+  "deductionScore",
+  "reasoningCheckpointPoints",
+  "evidenceRelationshipPoints",
+  "finalConclusionPoints",
+  "trainingCompletion",
 ] as const;
 
 export async function GET(request: Request) {
@@ -52,6 +60,8 @@ export async function GET(request: Request) {
   }
 
   const filters: ResultFilters = {
+    scoringVersion: url.searchParams.get("scoringVersion") ?? undefined,
+    includeTests: url.searchParams.get("includeTests") === "true",
     classId: url.searchParams.get("classId") ?? undefined,
     scenarioId: url.searchParams.get("scenarioId") ?? undefined,
     status: url.searchParams.get("status") ?? undefined,
@@ -65,7 +75,10 @@ export async function GET(request: Request) {
 
   const csv = buildCsv(
     [...CSV_COLUMNS],
-    filtered.map((r) => CSV_COLUMNS.map((col) => r[col as keyof typeof r] as string | number | null)),
+    filtered.map((r) => {
+      const row={...r,...deductionExportColumns(r)};
+      return CSV_COLUMNS.map(col=>row[col]??null);
+    }),
   );
 
   return new Response(csv, {

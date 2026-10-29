@@ -1,0 +1,113 @@
+{
+    "version":  0,
+    "subjects":  [
+                     {
+                         "id":  "BODY-A",
+                         "statements":  [
+                                            {
+                                                "id":  "body-a-location",
+                                                "text":  "Body observed on the rear ground-floor kitchen floor."
+                                            },
+                                            {
+                                                "id":  "body-a-position",
+                                                "text":  "John\u0027s position and orientation were documented before anything else in the scene was disturbed. The body alone does not identify the attacker."
+                                            },
+                                            {
+                                                "id":  "body-a-wound-sharp-object",
+                                                "text":  "John has a narrow, deep penetrating wound consistent with a sharp-edged object. The injury is not consistent with an ordinary accidental fall."
+                                            }
+                                        ]
+                     },
+                     {
+                         "id":  "EVD-014",
+                         "statements":  [
+                                            {
+                                                "id":  "knife-blade-length",
+                                                "text":  "Blade measures approximately 15 cm, consistent with a standard kitchen knife."
+                                            },
+                                            {
+                                                "id":  "knife-blood-trace",
+                                                "text":  "Trace blood residue observed along the blade edge."
+                                            },
+                                            {
+                                                "id":  "knife-location",
+                                                "text":  "Recovered on the kitchen floor, approximately 1.2 meters from the victim."
+                                            },
+                                            {
+                                                "id":  "knife-print-on-handle",
+                                                "text":  "A latent print was developed on the handle using powder and a brush, then revealed and lifted before the knife was collected."
+                                            },
+                                            {
+                                                "id":  "knife-owner-speculation",
+                                                "text":  "Paul\u0027s print on the handle shows that he handled the knife at some point. It does not show when or why he handled it."
+                                            },
+                                            {
+                                                "id":  "knife-conclusion-weapon",
+                                                "text":  "Paul\u0027s fingerprint proves he used this knife during the attack."
+                                            },
+                                            {
+                                                "id":  "knife-wound-match",
+                                                "text":  "Blade dimensions are consistent with the sharp-object wound documented on the body, supporting this knife as a possible weapon."
+                                            }
+                                        ]
+                     },
+                     {
+                         "id":  "EVD-015",
+                         "statements":  [
+                                            {
+                                                "id":  "blood-spatter-location",
+                                                "text":  "Spatter observed on the kitchen floor near the body."
+                                            },
+                                            {
+                                                "id":  "blood-spatter-droplet-pattern",
+                                                "text":  "The stain distribution supports the kitchen near John\u0027s position as the area where blood was deposited during the attack."
+                                            },
+                                            {
+                                                "id":  "blood-spatter-swab-collection",
+                                                "text":  "Collected via swab sample due to its liquid form; not suitable for physical bagging like solid evidence."
+                                            },
+                                            {
+                                                "id":  "blood-spatter-mechanism-only",
+                                                "text":  "The pattern is consistent with blood being deposited during an attack near John\u0027s location. It does not identify who caused the attack."
+                                            },
+                                            {
+                                                "id":  "blood-spatter-fall-confirmed",
+                                                "text":  "The blood pattern identifies Paul as the attacker."
+                                            },
+                                            {
+                                                "id":  "blood-spatter-identity-assumed",
+                                                "text":  "The blood pattern proves Peter was the last person with John."
+                                            }
+                                        ]
+                     },
+                     {
+                         "id":  "EVD-018",
+                         "statements":  [
+                                            {
+                                                "id":  "bottle-location",
+                                                "text":  "Found on the rear kitchen counter, beside the preparation area."
+                                            },
+                                            {
+                                                "id":  "bottle-first-encountered",
+                                                "text":  "Separate fingerprints recovered from the bottle were identified as John\u0027s, Peter\u0027s and Paul\u0027s."
+                                            },
+                                            {
+                                                "id":  "bottle-standard-procedure",
+                                                "text":  "The bottle\u0027s original location and condition were documented before collection."
+                                            },
+                                            {
+                                                "id":  "bottle-fingerprint-pending",
+                                                "text":  "The recovered prints establish handling, but do not establish when each person touched the bottle."
+                                            },
+                                            {
+                                                "id":  "bottle-intoxication-explains-fall",
+                                                "text":  "Paul\u0027s fingerprint on the bottle places him at the house when the attack occurred."
+                                            },
+                                            {
+                                                "id":  "bottle-recent-drinking-assumed",
+                                                "text":  "The bottle proves Peter was still inside when John was attacked."
+                                            }
+                                        ]
+                     }
+                 ]
+}

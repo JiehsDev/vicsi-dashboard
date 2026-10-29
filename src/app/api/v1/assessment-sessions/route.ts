@@ -5,6 +5,7 @@ import { sha256Hex, canonicalPayloadHash } from "@/lib/assessmentCrypto";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rateLimit";
 import { parseRpcError } from "@/lib/assessmentErrors";
 import { verifySession } from "@/lib/scoring/verify";
+import { mergeAssessmentEvents } from "@/lib/scoring/assessmentEventEnvelope";
 import { checkUploadTokenBinding, type UploadTokenBindingRow } from "@/lib/vrUploadAuthorization";
 
 const SUPPORTED_PAYLOAD_VERSIONS = [1];
@@ -60,6 +61,9 @@ export async function POST(request: Request) {
   if (payloadVersion === null || !SUPPORTED_PAYLOAD_VERSIONS.includes(payloadVersion)) {
     return apiError("PAYLOAD_VERSION_UNSUPPORTED", `payloadVersion ${payloadVersion} is not supported.`);
   }
+
+  try { payload = mergeAssessmentEvents(payload); }
+  catch { return apiError("VALIDATION_ERROR", "Malformed or conflicting assessment records."); }
 
   const orderedEvents = Array.isArray(payload.orderedEvents) ? payload.orderedEvents : [];
   if (orderedEvents.length > MAX_EVENTS_PER_REQUEST) {

@@ -1,3 +1,5 @@
+import {resolveEvidenceName} from "@/lib/scenarioContent";
+import {questionLabel} from "@/lib/questionDisplay";
 // src/app/api/v1/class-results/[sessionId]/export/route.ts
 //
 // Per-session CSV export, instructor-only (Part 5). One CSV with a
@@ -29,6 +31,8 @@ const COLUMNS = [
   "scenarioId",
   "scenarioDisplayName",
   "scenarioVersion",
+  "scoringVersion",
+  "groundTruthVersion",
   "startedAtUtc",
   "completedAtUtc",
   "durationSeconds",
@@ -40,6 +44,7 @@ const COLUMNS = [
   "key",
   "value",
   "evidenceId",
+  "evidenceDisplayLabel",
   "finalStatus",
   "swabbingDone",
   "fingerprintingDone",
@@ -55,8 +60,11 @@ const COLUMNS = [
   "reasoningOptionId",
   "eventType",
   "targetId",
+  "targetDisplayLabel",
   "timestampMs",
   "sequenceNumber",
+  "relationshipDisplayLabel",
+  "checkpointDisplayLabel",
 ] as const;
 
 type Row = Partial<Record<(typeof COLUMNS)[number], string | number | boolean | null>>;
@@ -93,6 +101,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
     scenarioId: detail.scenarioId,
     scenarioDisplayName: detail.scenarioDisplayName,
     scenarioVersion: detail.scenarioVersion,
+    scoringVersion: detail.scoringVersion,
+    groundTruthVersion: detail.groundTruthVersion,
     startedAtUtc: detail.startedAtUtc,
     completedAtUtc: detail.completedAtUtc,
     durationSeconds: detail.durationSeconds,
@@ -112,6 +122,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
       ...base,
       recordType: "evidence",
       evidenceId: e.evidenceId,
+      evidenceDisplayLabel: resolveEvidenceName(e.evidenceId),
       finalStatus: e.finalStatus,
       swabbingDone: e.swabbingDone,
       fingerprintingDone: e.fingerprintingDone,
@@ -122,16 +133,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ sess
     });
   }
   for (const r of detail.relationships) {
-    rows.push({ ...base, recordType: "relationship", relationshipId: r.relationshipId, relationshipState: r.state, wasEverSelected: r.wasEverSelected });
+    rows.push({ ...base, recordType: "relationship", relationshipId: r.relationshipId, relationshipDisplayLabel: questionLabel(r.relationshipId), relationshipState: r.state, wasEverSelected: r.wasEverSelected });
   }
   for (const h of detail.hypotheses) {
-    rows.push({ ...base, recordType: "hypothesis", checkpointId: h.checkpointId, selectedOptionId: h.selectedOptionId, reasoningOptionId: h.reasoningOptionId });
+    rows.push({ ...base, recordType: "hypothesis", checkpointId: h.checkpointId, checkpointDisplayLabel: questionLabel(h.checkpointId), selectedOptionId: h.selectedOptionId, reasoningOptionId: h.reasoningOptionId });
   }
   for (const v of detail.procedureViolations) {
-    rows.push({ ...base, recordType: "procedural_violation", eventType: v.eventType, targetId: v.targetId, timestampMs: v.timestampMs });
+    rows.push({ ...base, recordType: "procedural_violation", eventType: v.eventType, targetId: v.targetId, targetDisplayLabel: v.targetId ? resolveEvidenceName(v.targetId) : null, timestampMs: v.timestampMs });
   }
   for (const e of detail.events) {
-    rows.push({ ...base, recordType: "event", sequenceNumber: e.sequenceNumber, timestampMs: e.timestampMs, eventType: e.eventType, targetId: e.targetId });
+    rows.push({ ...base, recordType: "event", sequenceNumber: e.sequenceNumber, timestampMs: e.timestampMs, eventType: e.eventType, targetId: e.targetId, targetDisplayLabel: e.targetId ? resolveEvidenceName(e.targetId) : null });
   }
 
   const csv = buildCsv(

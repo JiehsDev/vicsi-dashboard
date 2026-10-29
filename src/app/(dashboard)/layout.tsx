@@ -1,7 +1,7 @@
 // src/app/(dashboard)/layout.tsx
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { signOut } from "@/app/login/actions";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getMyProfile } from "@/lib/supabaseClient";
@@ -37,18 +37,14 @@ export default async function DashboardLayout({
   // pairing state to load - see src/app/results/page.tsx. A signed-in
   // student now goes straight there instead of dead-ending here.
   const profile = await getMyProfile();
+  if (!profile) redirect("/login");
   if (profile?.role === "student") {
     redirect("/results");
   }
 
   return (
-    <div className="min-h-screen">
-      <Suspense fallback={null}>
-        <TopNav userEmail={userEmail} onSignOut={signOut} />
-      </Suspense>
-      <main className="mx-auto max-w-[1220px] px-6 pb-16 pt-8 sm:px-10">
-        {children}
-      </main>
-    </div>
+    <Suspense fallback={<p className="p-8">Loading workspace…</p>}>
+      <AppShell role="instructor" name={profile?.fullName ?? userEmail ?? "Instructor"} onSignOut={signOut}>{children}</AppShell>
+    </Suspense>
   );
 }

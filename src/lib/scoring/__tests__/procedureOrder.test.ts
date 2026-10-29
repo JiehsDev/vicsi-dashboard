@@ -185,7 +185,7 @@ test("overall: 1.2.0 score unchanged by the new category; 1.3.0 adds it with wei
   assert.equal(computeOverallScore(session, rules13().categoryWeights), Math.round(((weightedOthers + 0.9) / (otherWeight + 1)) * 10000) / 10000);
 });
 
-test("session resolution: 1.3.0 supported; unsupported 1.6.0 still requires review", () => {
+test("session resolution: 1.3.0 supported; unsupported 1.8.0 still requires review", () => {
   assert.equal(resolveSessionScoring(SCENARIO, "1.1.0", "1.3.0").scoringRules?.scoringRulesVersion, "1.3.0");
-  assert.equal(resolveSessionScoring(SCENARIO, "1.1.0", "1.6.0").scoringRules, null);
+  assert.equal(resolveSessionScoring(SCENARIO, "1.1.0", "1.8.0").scoringRules, null);
 });

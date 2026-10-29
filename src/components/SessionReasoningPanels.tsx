@@ -9,11 +9,12 @@
 //
 // Every id -> text resolution goes through src/lib/scenarioContent.ts, never
 // inline here — this file only decides LAYOUT, never CONTENT.
+import { evidenceText } from "@/lib/evidenceDisplay";
 import { Card } from "./Card";
 import type { ResultDetail } from "@/lib/results";
 import { resolveFindingName, resolveInsight, isTestOnlyFinding } from "@/lib/scenarioContent";
 
-export function ConfirmedFindingsCard({ findingIds }: { findingIds: string[] }) {
+export function ConfirmedFindingsCard({ findingIds, groundTruthVersion }: { findingIds: string[]; groundTruthVersion?: string | null }) {
   const real = findingIds.filter((id) => !isTestOnlyFinding(id));
   if (real.length === 0) return null;
 
@@ -23,7 +24,7 @@ export function ConfirmedFindingsCard({ findingIds }: { findingIds: string[] }) 
       <ul className="flex flex-col gap-1.5">
         {real.map((id) => (
           <li key={id} className="text-[12.5px] text-ink-muted">
-            {resolveFindingName(id)}
+            {evidenceText(resolveFindingName(id, groundTruthVersion))}
           </li>
         ))}
       </ul>
@@ -31,7 +32,7 @@ export function ConfirmedFindingsCard({ findingIds }: { findingIds: string[] }) 
   );
 }
 
-export function InsightsCard({ insightIds }: { insightIds: string[] }) {
+export function InsightsCard({ insightIds, groundTruthVersion }: { insightIds: string[]; groundTruthVersion?: string | null }) {
   if (insightIds.length === 0) return null;
 
   return (
@@ -39,11 +40,11 @@ export function InsightsCard({ insightIds }: { insightIds: string[] }) {
       <div className="mb-3 text-[13px] font-semibold text-ink">Investigative insights ({insightIds.length})</div>
       <ul className="flex flex-col gap-3">
         {insightIds.map((id) => {
-          const insight = resolveInsight(id);
+          const insight = resolveInsight(id, groundTruthVersion);
           return (
             <li key={id}>
-              <div className="text-[13px] font-medium text-ink">{insight.displayName}</div>
-              {insight.description && <p className="mt-0.5 text-[12.5px] text-ink-muted">{insight.description}</p>}
+              <div className="text-[13px] font-medium text-ink">{evidenceText(insight.displayName)}</div>
+              {insight.description && <p className="mt-0.5 text-[12.5px] text-ink-muted">{evidenceText(insight.description)}</p>}
             </li>
           );
         })}

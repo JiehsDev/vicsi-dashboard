@@ -2,6 +2,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { timeoutFetch } from "./timeoutFetch";
+import { DASHBOARD_SESSION_COOKIE, dashboardCookieOptions, isSupabaseAuthCookie, readDashboardSession } from "./dashboardSession";
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
@@ -21,12 +22,16 @@ export async function createSupabaseServerClient() {
     global: { fetch: timeoutFetch },
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        const all = cookieStore.getAll();
+        // Enforce expiry in data access too, including browser-authenticated
+        // API routes. Bearer-token headset APIs use their separate clients.
+        return readDashboardSession(cookieStore.get(DASHBOARD_SESSION_COOKIE)?.value)
+          ? all : all.filter(({ name }) => !isSupabaseAuthCookie(name));
       },
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options as CookieOptions);
+            cookieStore.set(name, value, dashboardCookieOptions(options as CookieOptions));
           });
         } catch {
           // Called from a Server Component that can't set cookies directly —

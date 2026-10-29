@@ -1,15 +1,17 @@
 // src/lib/scoring/evidenceScorer.ts
 import "server-only";
-import type { GroundTruth, ScoringSessionEvent } from "./types.ts";
+import type { GroundTruth, ScoringRules, ScoringSessionEvent } from "./types.ts";
 import { payloadValue } from "./types.ts";
 
 /** Direct 1:1 port of Tools/EvidenceScorer/Program.cs's Score() method.
  *  Deliberately NOT redesigned or "improved" — every branch, every ratio,
  *  every NaN-for-zero-denominator rule below mirrors the .NET reference
- *  exactly, so this module's output can be checked against it fixture by
+ *  exactly on the historical two-argument path, so output can be checked against it fixture by
  *  fixture (see src/lib/scoring/__tests__/parity.test.ts). If the .NET
  *  scorer's behavior ever changes, this file must change to match — never
- *  the other way around, and never independently. */
+ *  the other way around, and never independently. The optional versioned rules
+ *  path excludes pure procedure-completion reports from 1.6.0 assessment; raw
+ *  observations and the offline historical analytics are unchanged. */
 
 function rank(sequence: readonly string[], status: string | null | undefined): number {
   if (!status) return -1;
@@ -56,7 +58,11 @@ export interface EvidenceScoreOutput {
   warnings: string[];
 }
 
-export function scoreEvidence(events: ScoringSessionEvent[], groundTruth: GroundTruth): EvidenceScoreOutput {
+export function scoreEvidence(events: ScoringSessionEvent[], groundTruth: GroundTruth, rules?: ScoringRules): EvidenceScoreOutput {
+  // Versioned exclusion only; the two-argument historical/.NET parity path
+  // remains unchanged. A training selection is never counted as an incorrect
+  // or unclassified reasoning answer, and remains in the stored raw report.
+  const trainingLines = new Set((rules?.trainingReportLines ?? []).map((line) => `${line.evidenceId}|${line.lineId}`));
   const sequence = groundTruth.lifecycleSequence;
   const markedRank = rank(sequence, "Marked");
   if (markedRank < 0) {
@@ -160,6 +166,7 @@ export function scoreEvidence(events: ScoringSessionEvent[], groundTruth: Ground
 
         const lineAccuracy = accurateByEvidence.get(evidenceId);
         for (const lineId of lineIdsRaw.split(",").filter((s) => s.length > 0)) {
+          if (trainingLines.has(`${evidenceId}|${lineId}`)) continue;
           const isAccurate = lineAccuracy?.get(lineId);
           if (lineAccuracy && isAccurate !== undefined) {
             if (isAccurate) documentationTruePositives++;

@@ -2,6 +2,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Suspense } from "react";
+import { DashboardSessionGuard } from "@/components/DashboardSessionGuard";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -10,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VR-CSI Case Analytics",
+  title: "ViCSI · Learning Analytics",
   description:
-    "Instructor dashboard for the VR CSI training simulator — Partido State University, Lagonoy Campus",
+    "Student learning records and instructor assessment analytics for ViCSI.",
 };
 
 export default function RootLayout({
@@ -23,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-bg font-sans text-ink antialiased">
+        <Suspense fallback={null}><DashboardSessionGuard /></Suspense>
         {children}
       </body>
     </html>

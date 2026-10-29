@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Dashboard checks
+
+`npm run test:dashboard` runs TypeScript validation, the current session-record/upload-route tests, then legacy presentation/scoring compatibility checks. It stops on the first failed check. `npm run typecheck`, `npm run test:sessions`, and `npm run test:dashboard:legacy` run those groups separately.
+
+For local Unity integration, set `VICSI_UNITY_PROJECT` to the Unity project directory. The integration checks use the existing `EducationalSessionRecordTest` capture plus the `ProcedureTimelineUploadTest` completion-event capture. Run those Unity suites before checking a new checkout with that environment variable set. Without a Unity path, synthetic dashboard fixtures still run and Unity-specific checks are reported as skipped.
+
+`npm run test:dashboard:browser` additionally checks the student/instructor pages at phone, tablet and desktop widths using isolated local fixtures. It requires the Unity capture and the configured local Edge executable; it does not read or write production data.
+
 ## Getting Started
 
 First, run the development server:
