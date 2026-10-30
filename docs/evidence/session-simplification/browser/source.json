@@ -1,0 +1,7 @@
+{
+  "source": "current-unity-upload.json",
+  "procedureSource": "procedure-events-wire.json (isolated Unity filter fixture)",
+  "score": 100,
+  "productionReads": 0,
+  "productionWrites": 0
+}

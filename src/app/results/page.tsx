@@ -4,9 +4,12 @@ import {getMyResultSummaries,applyResultFilters,validateDateRange} from "@/lib/r
 import {PageHeading,Section} from "@/components/AnalyticsUI";
 import {ResultFilters,type DashboardQuery} from "@/components/ResultFilters";
 import {SessionTable} from "@/components/SessionTable";
+import {StudentSessionsEmpty} from "@/components/StudentGuidance";
 export default async function MyResultsPage({searchParams}:{searchParams:Promise<DashboardQuery>}) {
  const profile=await getMyProfile();if(!profile)redirect("/login");if(profile.role!=="student")redirect("/class-results");
  const query=await searchParams,all=await getMyResultSummaries(),dates=validateDateRange(query.dateFrom,query.dateTo);
  const rows=dates.error?[]:applyResultFilters(all,{...query,...dates,includeTests:query.includeTests==="true"});
- return <><PageHeading eyebrow="Student workspace" title="My Sessions" description="Your investigation activity, answers and deduction results."/><ResultFilters query={query} rows={all}/>{dates.error&&<p className="notice" role="alert">{dates.error}</p>}<Section title="Sessions"><SessionTable rows={rows}/></Section></>;
+ const eligible=all.filter(r=>query.includeTests==="true"||!r.isTestSession);
+ const emptyKind=all.length===0?"first":eligible.length===0?"tests":"filtered";
+ return <><PageHeading eyebrow="Student workspace" title="My Sessions" description="Open an investigation to review your score, answers and recorded activity."/><ResultFilters query={query} rows={all}/>{dates.error?<p className="notice" role="alert">{dates.error}</p>:<Section title="Sessions">{rows.length?<SessionTable rows={rows}/>:<StudentSessionsEmpty kind={emptyKind}/>}</Section>}</>;
 }

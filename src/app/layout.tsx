@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Suspense } from "react";
 import { DashboardSessionGuard } from "@/components/DashboardSessionGuard";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,7 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{__html:THEME_INIT_SCRIPT}} /></head>
       <body className="min-h-screen bg-bg font-sans text-ink antialiased">
         <Suspense fallback={null}><DashboardSessionGuard /></Suspense>
         {children}

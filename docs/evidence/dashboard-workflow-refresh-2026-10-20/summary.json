@@ -1,0 +1,10 @@
+{
+    "typecheck":  "passed",
+    "deployed":  false,
+    "compatibilityTests":  52,
+    "unityUploadChecks":  14,
+    "currentSessionTests":  23,
+    "totalChecks":  110,
+    "browserChecks":  21,
+    "failed":  0
+}

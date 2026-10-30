@@ -1,0 +1,31 @@
+{
+  "currentSource": "Unity relationship-review/completed-upload-wire.json",
+  "currentScore": 29.166666666666664,
+  "currentComponents": [
+    {
+      "label": "Reasoning Checkpoints",
+      "points": 10,
+      "maximum": 60
+    },
+    {
+      "label": "Evidence Relationships",
+      "points": 4.166666666666666,
+      "maximum": 25
+    },
+    {
+      "label": "Final Conclusion",
+      "points": 15,
+      "maximum": 15
+    }
+  ],
+  "currentReviewResponses": 1,
+  "historicalRecordsRead": 20,
+  "historicalVersions": [
+    "1.5.0",
+    "1.4.0",
+    "1.0.0",
+    "1.1.0"
+  ],
+  "readsOnly": true,
+  "productionWrites": 0
+}

@@ -115,7 +115,7 @@ test('historical child-table answers and top-level conclusion survive absent eve
 });
 test('session lists expose exactly the requested compact columns and explicit View links',()=>{
  const r={...currentResult(),studentDisplayName:'John Doe',studentIdCode:'2099-00099',classDisplayName:'Class Z'};
- for(const instructor of [false,true]){const html=renderToStaticMarkup(<SessionTable rows={[r]} instructor={instructor}/>);assert.equal((html.match(/<th(?: |>|\n)/g)??[]).length,instructor?6:5);assert.match(html,/Duration/);assert.match(html,/Deduction Score/);assert.match(html,/View →/);assert.doesNotMatch(html,/Reasoning \/|Verification|Closeout|Attempts<\/th>/);}
+ for(const instructor of [false,true]){const html=renderToStaticMarkup(<SessionTable rows={[r]} instructor={instructor}/>);assert.equal((html.match(/<th(?: |>|\n)/g)??[]).length,instructor?6:5);assert.match(html,/Duration/);assert.match(html,/Deduction Score/);assert.match(html,/View session →/);assert.doesNotMatch(html,/Reasoning \/|Verification|Closeout|Attempts<\/th>/);}
 });
 const project=process.env.VICSI_UNITY_PROJECT;
 test('fresh Unity upload has exact authoritative score, all choices and opaque internal analytics',{skip:!project},()=>{

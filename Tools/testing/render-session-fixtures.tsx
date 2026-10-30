@@ -19,7 +19,9 @@ import type {ScoringSessionEvent} from '../../src/lib/scoring/types.ts';
 const project=process.env.VICSI_UNITY_PROJECT;if(!project)throw new Error('Set VICSI_UNITY_PROJECT to the local Unity workspace.');
 const out='docs/evidence/session-simplification/browser';await mkdir(out,{recursive:true});
 const wire=JSON.parse(await readFile(path.join(project,'docs/evidence/session-simplification/current-unity-upload.json'),'utf8'));
-const events=mergeAssessmentEvents(wire).orderedEvents as ScoringSessionEvent[];
+// The complete recorder fixture below replaces the base capture's reports.
+// Keeping both would create duplicate submissions for the same evidence source.
+const events=(mergeAssessmentEvents(wire).orderedEvents as ScoringSessionEvent[]).filter(e=>e.eventType!=='ReportLinesSelected');
 // Composite local preview: case capture plus the isolated Unity upload-filter fixture.
 // These files do not represent a single physical-headset playthrough.
 const procedures=JSON.parse(await readFile(path.join(project,'docs/evidence/dashboard-workflow-refresh-2026-10-20/procedure-events-wire.json'),'utf8'));

@@ -19,6 +19,7 @@
 // accounts, and ON CONFLICT / existence checks for everything else.
 
 import { createClient } from "@supabase/supabase-js";
+import { ACTIVE_LAST_DRINK_SCENARIO } from "./active-last-drink-scenario.mjs";
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -140,13 +141,7 @@ async function ensureAccount({ email, password, profile }) {
   // --- Scenario (must match Assets/_Project/Data/Assessment/Scenario_CSI_Environment.asset exactly) ---
   const SCENARIO_ID = "CSI-ENVIRONMENT-001";
   const { error: scenarioError } = await supabase.from("scenarios").upsert(
-    {
-      scenario_id: SCENARIO_ID,
-      display_name: "CSI Environment",
-      scenario_version: "1.0.0",
-      scoring_rules_version: "1.0.0",
-      ground_truth_version: "1.0.0",
-    },
+    ACTIVE_LAST_DRINK_SCENARIO,
     { onConflict: "scenario_id" },
   );
   if (scenarioError) throw scenarioError;

@@ -6,10 +6,6 @@ import { signOut } from "@/app/login/actions";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getMyProfile } from "@/lib/supabaseClient";
 
-// TODO BEFORE FINAL STUDENT EVALUATION: restore headset pairing and remove
-// John Doe development identity. See supabase/seed/seed-john-doe-bypass-identity.mjs
-// (vicsi-dashboard) and PreSessionFlowController.cs's own TODO (Unity repo) for the
-// matching Unity-side restoration steps - this file's own change is web-only.
 export default async function DashboardLayout({
   children,
 }: {
@@ -26,20 +22,12 @@ export default async function DashboardLayout({
     console.error("[dashboard layout] Supabase auth check failed:", error);
   }
 
-  // TEMPORARY DEVELOPMENT BYPASS - restore student pairing before final
-  // deployment. Previously this branch rendered an inline "student analytics
-  // view isn't built yet - pair your headset" card with a Pair headset
-  // button. Pairing is now bypassed globally (see PreSessionFlowController's
-  // own TEMPORARY DEVELOPMENT BYPASS in the Unity repo - every session is
-  // already attributed to John Doe without ever pairing), so that card no
-  // longer reflects anything real: the "student analytics view" it claimed
-  // wasn't built is exactly /results, which already exists and needs no
-  // pairing state to load - see src/app/results/page.tsx. A signed-in
-  // student now goes straight there instead of dead-ending here.
+  // Students enter through Home under the separately protected /results layout.
+  // Existing /results bookmarks still open their searchable session history.
   const profile = await getMyProfile();
   if (!profile) redirect("/login");
   if (profile?.role === "student") {
-    redirect("/results");
+    redirect("/results/home");
   }
 
   return (

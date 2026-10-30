@@ -1,0 +1,13 @@
+# Readable reasoning and relationship labels — 2026-10-18
+
+The dashboard now resolves legacy HYP IDs, current RC IDs and relationship IDs using `src/lib/questionDisplay.ts` and `src/lib/data/questionDisplay.v1.json`. The data mirrors Unity's authored current/legacy question order and relationship display names. Tests verify parity with Unity assets and the registered scoring checkpoint order. Historical HYP-01/02/03 become Reasoning Question 1/2/3. The current fingerprint question remains question 3; its historical HYP-02 host is not treated as a universal alias for current question 2.
+
+Shared evidenceText/evidenceLabel presentation functions compose the question formatter, so existing question/answer prose, timeline descriptions, legacy activity, training and review panels also resolve technical IDs. SessionRecord question captions use readable question/relationship names for both student and instructor pages. Historical answer headings resolve at render time. Procedure event-debug strings are removed from visible timeline rows; React record keys remain unchanged. Instructor reasoning review uses readable question labels. Technical CSV exports add checkpointDisplayLabel and relationshipDisplayLabel while preserving their original ID columns.
+
+No upload schema, API validation, scoring input/rule, stored weight, database ID or Supabase record changed. A direct local upload-handler regression confirms HYP-03 remains the stored event target and both dashboard roles display readable labels with the same final grade. Historical raw-ID-only sessions remain readable without inventing absent question text, options or weights.
+
+Accepted dashboard checks: 52 dashboard tests, 18 session/upload tests and 21 responsive browser checks; TypeScript, scoped lint and production build pass. General scoring tests: 212 passed with seven optional capture checks skipped; all seven subsequently passed with Unity and wire paths supplied. The capture regression for relationship review was updated to assert the existing simplified essential-event format instead of removed legacy transport summaries. No upload implementation was changed.
+
+Unity also passed 313 assertions across seven suites, with zero C# compilation errors. Complete validation, file-and-line usage inventories and internal-only classifications are in the Unity workspace's `docs/validation/question-display-cleanup-2026-10-18.md` and `docs/evidence/question-display/`.
+
+No commits, pushes, deployments, migrations, seeds or production-data writes. Browser testing used local rendered fixtures, not the hosted application.

@@ -3,6 +3,7 @@ import {createRequire} from 'node:module';
 
 const require=createRequire(import.meta.url);
 const checks=[
+ {label:'Student home guidance, status and review links',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/studentHome.test.tsx']},
  {label:'TypeScript validation',args:[require.resolve('typescript/bin/tsc'),'--noEmit','--incremental','false']},
  {label:'Dashboard session expiry and browser cookie policy',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/dashboardSession.test.ts']},
  {label:'Current session records, upload API and student/instructor routes',args:['Tools/testing/run-session-tests.mjs']},

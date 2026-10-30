@@ -33,6 +33,7 @@
 // Supabase project - see PreSessionFlowController's own restoration TODO.
 
 import { createClient } from "@supabase/supabase-js";
+import { ACTIVE_LAST_DRINK_SCENARIO } from "./active-last-drink-scenario.mjs";
 import { randomBytes, createHash } from "node:crypto";
 
 const url = process.env.SUPABASE_URL;
@@ -139,13 +140,7 @@ async function ensureAccount({ email, password, profile }) {
   const { data: scenarioRow, error: scenarioError } = await supabase
     .from("scenarios")
     .upsert(
-      {
-        scenario_id: SCENARIO_ID,
-        display_name: "CSI Environment",
-        scenario_version: "1.0.0",
-        scoring_rules_version: "1.0.0",
-        ground_truth_version: "1.0.0",
-      },
+      ACTIVE_LAST_DRINK_SCENARIO,
       { onConflict: "scenario_id" },
     )
     .select("scenario_version, scoring_rules_version")

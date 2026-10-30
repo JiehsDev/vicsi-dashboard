@@ -1,0 +1,75 @@
+{
+  "mirroredTimelineDefinitions": true,
+  "missingEvents": [
+    {
+      "type": "SceneLogSigned",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "FreshGlovesEquipped",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "FreshSwabLoaded",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "PhotographicScaleCaptured",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "SampleDryingCompleted",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "SamplePackaged",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    },
+    {
+      "type": "FingerprintPracticeCompleted",
+      "unityUploads": false,
+      "dashboardRecognizes": false
+    }
+  ],
+  "renderedTimeline": [
+    {
+      "id": "EvidenceTraceMarked:8",
+      "timestampMs": 8000,
+      "description": "Placed trace marker 4 on Evidence 1 – Kitchen Knife"
+    },
+    {
+      "id": "EvidenceAddedToInventory:9",
+      "timestampMs": 9000,
+      "description": "Stored Blood Sample – Evidence 1 – Kitchen Knife"
+    },
+    {
+      "id": "SceneReleaseConfirmed:10",
+      "timestampMs": 10000,
+      "description": "Released crime scene"
+    }
+  ],
+  "currentLabels": [
+    {
+      "id": "EVD-014",
+      "label": "Evidence 1 – Kitchen Knife"
+    },
+    {
+      "id": "EVD-015",
+      "label": "Evidence 2 – Blood Spatter"
+    },
+    {
+      "id": "EVD-018",
+      "label": "Evidence 3 – Empty Liquor Bottle"
+    },
+    {
+      "id": "blood-sample:EVD-014",
+      "label": "Blood Sample – Evidence 1 – Kitchen Knife"
+    }
+  ]
+}
