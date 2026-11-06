@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from './LoadingLink';
 import {adminDate,auditActionLabel,type AuditEvent} from '@/lib/adminPresentation';
 const fieldLabels:Record<string,string>={name:'Name',active:'Administrator access',suspended:'Account suspended',section:'Section',academic_year:'Academic year',semester:'Semester',archived:'Archived',enabled:'Invites enabled'};
 function valueText(value:unknown){return typeof value==='boolean'?(value?'Yes':'No'):typeof value==='string'?value:'Not set';}

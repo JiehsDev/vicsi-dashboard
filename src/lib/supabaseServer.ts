@@ -19,7 +19,7 @@ export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
-    global: { fetch: timeoutFetch },
+    global: { fetch: (input,init)=>timeoutFetch(input,{...init,cache:'no-store'}) },
     cookies: {
       getAll() {
         const all = cookieStore.getAll();

@@ -1,4 +1,5 @@
 "use client";
+import {LoadingStatus} from "./LoadingFeedback";
 import {useEffect,useState} from "react";
 import {Copy,Download} from "lucide-react";
 import QRCode from "qrcode";
@@ -21,7 +22,7 @@ export function ClassInviteShare({code,token,enabled}:{code:string;token:string;
     <label htmlFor="class-invite-link">Invite link</label>
     <input id="class-invite-link" type="text" readOnly value={url} onFocus={e=>e.currentTarget.select()}/>
     <button type="button" className="button" disabled={!url} onClick={()=>copy(url)}><Copy size={14} aria-hidden="true"/>Copy link</button>
-    {qr&&<div className="invite-qr">{/* Generated PNG data URL; image optimization is unnecessary. */}
+    {!url&&<LoadingStatus>Preparing class invitation…</LoadingStatus>}{qr&&<div className="invite-qr">{/* Generated PNG data URL; image optimization is unnecessary. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={qr} width={192} height={192} alt="Scan to open this class invitation"/><div><h3>Scan to join</h3><p>Students sign in, check the class details, then choose Join class.</p><a className="button" href={qr} download="vicsi-class-invite.png"><Download size={14} aria-hidden="true"/>Download QR code</a></div></div>}
     <p className="invite-feedback" role="status" aria-live="polite">{notice}</p>

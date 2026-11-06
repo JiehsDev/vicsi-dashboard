@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+﻿import Link from "./LoadingLink";
 import type {ResultSummary,InstructorResultRow} from "@/lib/results";
 import {assessedScore,formatPoints} from "@/lib/assessmentPresentation";
 import {dateLabel,EmptyState} from "./AnalyticsUI";

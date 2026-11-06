@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "./LoadingLink";
 import {ArrowRight} from "lucide-react";
 import type {ResultDetail,ResultSummary} from "@/lib/results";
 import {formatPoints} from "@/lib/assessmentPresentation";

@@ -1,3 +1,5 @@
+import Form from 'next/form';
+import {SubmitButton} from '@/components/SubmitButton';
 import Link from "next/link";
 import {notFound} from "next/navigation";
 import {getClassDetail} from "@/lib/classes";
@@ -27,10 +29,10 @@ export default async function ClassStudentPage({params,searchParams}: {
       {label:"Incomplete",value:sessions.filter(s=>!s.completedAtUtc).length},
     ]}/>
     <Section title="Student sessions">
-      <form method="GET" className="student-history-filter">
+      <Form action={base} className="student-history-filter">
         <label><input type="checkbox" name="includeTests" value="1" defaultChecked={query.includeTests==="1"}/> Include test sessions</label>
-        <button className="button" type="submit">Apply</button>
-      </form>
+        <SubmitButton className="button" pendingLabel="Applying filters…">Apply</SubmitButton>
+      </Form>
       {!sessions.length?<EmptyState title="No session received">{all.length?"Only test sessions have been received. Select Include test sessions to view them.":"No uploaded investigation is available for this student yet. A session will appear here after the headset uploads it."}</EmptyState>:
         <PaginatedSessions rows={sessions} query={query} basePath={base} sessionBasePath={`${base}/sessions`}/>}
     </Section>

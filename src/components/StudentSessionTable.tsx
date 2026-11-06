@@ -1,5 +1,5 @@
 // src/components/StudentSessionTable.tsx
-import Link from "next/link";
+import Link from "./LoadingLink";
 import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import type { StudentSessionSummary } from "@/lib/types";
 

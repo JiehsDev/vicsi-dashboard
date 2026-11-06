@@ -1,3 +1,4 @@
+import {SubmitButton} from '@/components/SubmitButton';
 // src/app/login/page.tsx
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -83,12 +84,12 @@ export default async function LoginPage({
                   className="mt-1.5 w-full rounded-xl border border-border bg-bg px-4 py-3.5 text-[14px] text-ink outline-none ring-2 ring-transparent transition placeholder:text-ink-subtle focus:border-primary focus:ring-primary/20"
                 />
               </label>
-              <button
-                type="submit"
+              <SubmitButton
+                pendingLabel="Signing in…"
                 className="mt-3 w-full rounded-full bg-primary py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
               >
                 Sign in
-              </button>
+              </SubmitButton>
             </form>
 
             <div className="mt-6 text-center text-[13px] text-ink-muted">

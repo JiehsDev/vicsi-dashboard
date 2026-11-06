@@ -1,5 +1,7 @@
 // src/components/SignupForm.tsx
 "use client";
+import {SubmitButton} from '@/components/SubmitButton';
+
 
 import { useState } from "react";
 import { KeyRound } from "lucide-react";
@@ -137,12 +139,12 @@ export function SignupForm({ error,next }: { error?: string;next?:string }) {
         )}
       </div>
 
-      <button
-        type="submit"
+      <SubmitButton
+        pendingLabel="Creating account…"
         className="mt-3 w-full rounded-full bg-primary py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
       >
         Create account
-      </button>
+      </SubmitButton>
     </form>
   );
 }

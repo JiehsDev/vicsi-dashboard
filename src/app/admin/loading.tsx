@@ -1,1 +1,2 @@
-export default function AdminLoading(){return <div className="loading-workspace" role="status"><p>Loading administration records…</p><div className="skeleton-line"/><div className="skeleton-block"/></div>;}
+import {LoadingPanel} from '@/components/LoadingFeedback';
+export default function AdminLoading(){return <LoadingPanel label="Loading administration records…"/>;}

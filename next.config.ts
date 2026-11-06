@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "node:path";
 
 const nextConfig: NextConfig = {
+  // Browser-memory page reuse only. Authorized database reads stay uncached.
+  // The visible workspace checks for changes independently every five seconds.
+  experimental: {staleTimes: {dynamic:120,static:120}},
   // Pins the workspace root explicitly. Without this, Next/Turbopack infers
   // the root by walking up for the nearest lockfile and found an unrelated,
   // orphaned package-lock.json in the parent user directory (no matching

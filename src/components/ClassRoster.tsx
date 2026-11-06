@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "./LoadingLink";
 import type {EnrolledStudent} from "@/lib/classes";
 import {studentHistoryPath} from "@/lib/classOverview";
 import {EmptyState} from "./AnalyticsUI";

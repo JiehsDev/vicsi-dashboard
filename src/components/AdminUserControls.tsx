@@ -1,4 +1,5 @@
 'use client';
+import {Spinner} from './LoadingFeedback';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {Modal} from './Modal';
@@ -20,7 +21,7 @@ export function AdminUserAction({mode,user,link}:{mode:Mode;user?:ManagedUser;li
   {needsReason&&<label>Reason for this change<textarea name="reason" required minLength={10} maxLength={500} rows={3}/><span>10–500 characters. Recorded in the activity log.</span></label>}
   {(mode==='invite'||(mode==='replace'&&link?.purpose==='instructor_invitation'))&&<label className="admin-email-choice"><input type="checkbox" name="sendEmail" value="true" defaultChecked/><span>Send invitation email<small>You can also copy the setup link after saving.</small></span></label>}
   {error&&<p role="alert" className="admin-data-notice">{error}</p>}
-  <div className="admin-dialog-actions"><button type="button" className="button" disabled={pending} onClick={()=>setOpen(false)}>Cancel</button><button type="submit" className={`button ${mode==='suspend'||mode==='revoke'?'admin-danger-button':'button-primary'}`} disabled={pending}>{pending?'Saving…':mode==='edit'?'Save details':titles[mode]}</button></div>
+  <div className="admin-dialog-actions"><button type="button" className="button" disabled={pending} aria-busy={pending} onClick={()=>setOpen(false)}>Cancel</button><button type="submit" className={`button ${mode==='suspend'||mode==='revoke'?'admin-danger-button':'button-primary'}`} disabled={pending} aria-busy={pending}>{pending&&<Spinner/>}{pending?'Saving…':mode==='edit'?'Save details':titles[mode]}</button></div>
  </form>}>{null}</Modal>{notice&&<p className="admin-email-notice" role="status">{notice}</p>}</>;
 }
 export function CopySetupLink({id}:{id:string}){
@@ -31,5 +32,5 @@ export function CopySetupLink({id}:{id:string}){
   const url=`${result.origin||window.location.origin}/account/setup#invite=${result.token}`;
   try{await navigator.clipboard.writeText(url);setMessage('Link copied. Share it privately with the recipient.');}catch{setFallback(url);}
  }catch{setMessage('The link could not be opened. Try again.');}});}
- return <><button type="button" className="button" disabled={pending} onClick={copy}>{pending?'Opening…':'Copy link'}</button>{message&&<p role="status" className="admin-copy-status">{message}</p>}<Modal open={!!fallback} title="Copy setup link" message="Your browser could not copy automatically. Select the link and copy it. Share it only with the intended recipient." onDismiss={()=>setFallback('')} body={<input className="admin-copy-field" aria-label="Setup link" value={fallback} readOnly onFocus={event=>event.target.select()}/>}><button className="button" onClick={()=>setFallback('')}>Done</button></Modal></>;
+ return <><button type="button" className="button" disabled={pending} aria-busy={pending} onClick={copy}>{pending&&<Spinner/>}{pending?'Opening…':'Copy link'}</button>{message&&<p role="status" className="admin-copy-status">{message}</p>}<Modal open={!!fallback} title="Copy setup link" message="Your browser could not copy automatically. Select the link and copy it. Share it only with the intended recipient." onDismiss={()=>setFallback('')} body={<input className="admin-copy-field" aria-label="Setup link" value={fallback} readOnly onFocus={event=>event.target.select()}/>}><button className="button" onClick={()=>setFallback('')}>Done</button></Modal></>;
 }

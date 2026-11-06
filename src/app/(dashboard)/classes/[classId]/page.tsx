@@ -1,3 +1,4 @@
+import {PendingForm,SubmitButton} from '@/components/SubmitButton';
 import { NotificationModal } from "@/components/NotificationModal";
 // src/app/(dashboard)/classes/[classId]/page.tsx
 import Link from "next/link";
@@ -88,33 +89,33 @@ export default async function ClassDetailPage({
         {error&&enroll==="1"&&<p className="notice" role="alert">{error}</p>}
         {rest.inviteChanged==="1"&&<p className="notice" role="status">Class invitation updated.</p>}
         <h3 className="enrollment-section-title">Add by student number</h3>
-        <form id={enrollmentFormId} action={enrollStudentAction} className="class-details-fields">
+        <PendingForm id={enrollmentFormId} action={enrollStudentAction} className="class-details-fields">
           <input type="hidden" name="classId" value={classId}/>
           <input type="hidden" name="returnTo" value="enroll-student"/>
           <div>
             <label htmlFor="studentNumber">Student number</label>
             <input id="studentNumber" name="studentNumber" type="text" required maxLength={100} placeholder="e.g. 2099-00001" defaultValue={enroll==="1"?rest.studentNumber??"":""} autoComplete="off"/>
           </div>
-        </form>
+        </PendingForm>
         <section className="enrollment-share-section" aria-label="Share class invite">
           <h3 className="enrollment-section-title">Share class invite</h3>
           {inviteUnavailable?<p>Class invites are temporarily unavailable. You can still enroll students by student number.</p>:invite?<>
             <ClassInviteShare code={invite.join_code} token={invite.invite_token} enabled={invite.enabled}/>
             <div className="invite-management-actions">
-              <form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value={invite.enabled?"disable":"enable"}/><button className="button" type="submit">{invite.enabled?"Turn invites off":"Turn invites on"}</button></form>
+              <form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value={invite.enabled?"disable":"enable"}/><SubmitButton className="button" pendingLabel="Updating invitation…">{invite.enabled?"Turn invites off":"Turn invites on"}</SubmitButton></form>
               <form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value="reset"/><ConfirmSubmitButton className="button" title="Replace class invitation?" confirmLabel="Replace invitation" confirmMessage="The old code, link and QR code will stop working. Enrolled students will stay in the class.">Replace code &amp; link</ConfirmSubmitButton></form>
             </div>
-          </>:<><p>Let students enroll themselves with a class code, invite link, or QR code.</p><form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value="create"/><button className="button" type="submit">Create class invite</button></form></>}
+          </>:<><p>Let students enroll themselves with a class code, invite link, or QR code.</p><form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value="create"/><SubmitButton className="button" pendingLabel="Creating invitation…">Create class invite</SubmitButton></form></>}
         </section>
       </EnrollStudentButton>}
       {/* Reset dialog state on every server response, including repeated saves. */}
       <ManageClassButton key={crypto.randomUUID()} formId={editFormId} initialOpen={manage==="1"} closeHref={manage==="1"?`/classes/${encodeURIComponent(classId)}`:undefined}>
         {error&&manage==="1"&&<p className="notice" role="alert">{error}</p>}
-        <form id={editFormId} action={updateClassAction} className="class-settings-form">
+        <PendingForm id={editFormId} action={updateClassAction} className="class-settings-form">
           <input type="hidden" name="classId" value={classId}/>
           <input type="hidden" name="returnTo" value="manage-class"/>
           <ClassDetailsFields {...editingValues}/>
-        </form>
+        </PendingForm>
         <details className="class-management-more">
           <summary>Enrollment and class status</summary>
         <div className="flex items-center gap-2">

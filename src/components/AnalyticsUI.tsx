@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type {CSSProperties} from "react";
+import {LoadingPanel} from './LoadingFeedback';
 
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode }) {
   return <div className="page-heading"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{action}</div>;
@@ -22,7 +23,7 @@ export function BarList({ rows, empty = "No assessed observations in this select
   return <ul className="bar-list">{rows.map(r => <li key={r.id}><div className="bar-label"><span>{r.href ? <Link href={r.href}>{r.label}</Link> : r.label}</span><strong>{r.value}{r.maximum !== undefined ? ` / ${r.maximum}` : ` ${countLabel}`}</strong></div><div className="bar-track" role="img" aria-label={`${r.label}: ${r.value}${r.maximum !== undefined ? ` out of ${r.maximum}` : ` ${countLabel}`}`}><span style={{ width: `${Math.max(0, Math.min(100, r.value / (r.maximum || max) * 100))}%` }}/></div>{r.detail && <p>{r.detail}</p>}</li>)}</ul>;
 }
 export function LoadingWorkspace() {
-  return <div className="loading-workspace" role="status" aria-live="polite"><p>Loading investigation records…</p><div className="skeleton-line"/><div className="skeleton-block"/><div className="skeleton-block"/></div>;
+  return <LoadingPanel/>;
 }
 export function dateLabel(value: string | null | undefined) {
   if (!value || !Number.isFinite(Date.parse(value))) return "Date not recorded";

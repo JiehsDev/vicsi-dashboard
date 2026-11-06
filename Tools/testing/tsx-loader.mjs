@@ -15,7 +15,7 @@ export async function resolve(specifier,context,next) {
   if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/results')return {url:new URL('./dashboard-fixture-backend.ts',import.meta.url).href,shortCircuit:true};
   if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/classes')return {url:new URL('./class-overview-fixture.ts',import.meta.url).href,shortCircuit:true};
   if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/supabaseClient')return {url:'data:text/javascript,export async function getMyProfile(){return globalThis.__vicsiProfile}',shortCircuit:true};
-  if(['next/link','next/navigation','next/headers','next/server','next/cache'].includes(specifier))return next(specifier+'.js',context);
+  if(['next/link','next/form','next/navigation','next/headers','next/server','next/cache'].includes(specifier))return next(specifier+'.js',context);
   if(specifier==='server-only')return {url:'data:text/javascript,export{}',shortCircuit:true};
   if(specifier.startsWith('@/'))specifier=pathToFileURL(path.join(root,'src',specifier.slice(2))).href;
   if(specifier.startsWith('.') || specifier.startsWith('file:')) {

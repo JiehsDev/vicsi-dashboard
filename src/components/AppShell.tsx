@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "./LoadingLink";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { Home, ClipboardList, BookOpen, LogOut, UserRound, UsersRound, ChevronDown,ShieldCheck,History,KeyRound } from "lucide-react";

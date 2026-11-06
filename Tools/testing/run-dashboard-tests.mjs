@@ -3,6 +3,8 @@ import {createRequire} from 'node:module';
 
 const require=createRequire(import.meta.url);
 const checks=[
+ {label:'Private page-cache scopes, fresh revisions and permission changes',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/dashboardRefresh.test.ts']},
+ {label:'Color palette persistence, validation and first-paint defaults',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/colorTheme.test.ts']},
  {label:'Synthetic demo session scoring, documentation and deterministic identities',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/dashboardDemoSeed.test.ts']},
  {label:'Self-service profile ownership, credentials and session actions',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/profileManagement.test.ts']},
  {label:'Resend invitation payload and transport outcomes',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/invitationEmail.test.ts']},

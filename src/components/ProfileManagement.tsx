@@ -1,4 +1,5 @@
 'use client';
+import {Spinner} from './LoadingFeedback';
 import Link from 'next/link';
 import {useActionState,useEffect,useRef,useState} from 'react';
 import {useSearchParams} from 'next/navigation';
@@ -27,7 +28,7 @@ function SecurityDialog({operation,onDismiss}:{operation:Exclude<ProfileOperatio
   return <Modal open title={info.title} message={info.description} onDismiss={()=>{if(!pending)onDismiss();}} className="profile-dialog" body={
     <form ref={ref} id="profile-security-form" action={action}>
       <input type="hidden" name="operation" value={operation}/>
-      {!state.ok && <fieldset disabled={pending}>
+      {!state.ok && <fieldset disabled={pending} aria-busy={pending}>
         <PasswordField name="currentPassword" label="Current web password" autoComplete="current-password"/>
         {operation==='password'&&<><PasswordField name="newPassword" label="New password" minLength={12}/><PasswordField name="confirmPassword" label="Confirm new password" minLength={12}/></>}
         {operation==='pin'&&<><div className="profile-field"><label htmlFor="profile-newPin">New four-digit PIN</label><input id="profile-newPin" name="newPin" type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} autoComplete="off" required/></div><div className="profile-field"><label htmlFor="profile-confirmPin">Confirm PIN</label><input id="profile-confirmPin" name="confirmPin" type="password" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} autoComplete="off" required/></div><p className="profile-help">Avoid repeated digits and simple sequences.</p></>}
@@ -35,8 +36,8 @@ function SecurityDialog({operation,onDismiss}:{operation:Exclude<ProfileOperatio
       <Feedback state={state}/>
     </form>
   }>
-    {state.signedOut?<Link href="/login" className="button button-primary">Sign in</Link>:<button type="button" className="button" autoFocus disabled={pending} onClick={onDismiss}>{state.ok?'Close':'Cancel'}</button>}
-    {!state.ok&&<button type="submit" form="profile-security-form" className="button button-primary" disabled={pending}>{pending?'Saving…':info.button}</button>}
+    {state.signedOut?<Link href="/login" className="button button-primary">Sign in</Link>:<button type="button" className="button" autoFocus disabled={pending} aria-busy={pending} onClick={onDismiss}>{state.ok?'Close':'Cancel'}</button>}
+    {!state.ok&&<button type="submit" form="profile-security-form" className="button button-primary" disabled={pending} aria-busy={pending}>{pending&&<Spinner/>}{pending?'Saving…':info.button}</button>}
   </Modal>;
 }
 export function ProfileManagement({profile}:{profile:AccountProfile}){
@@ -51,7 +52,7 @@ export function ProfileManagement({profile}:{profile:AccountProfile}){
       <Link href="/profile?tab=security" scroll={false} aria-current={tab==='security'?'page':undefined}>Security</Link>
     </nav><div className="profile-content">
       {tab==='profile'?<><section className="profile-section"><h2>Personal details</h2><p className="profile-help">Your name appears alongside your account and investigation records.</p>
-        <form action={action} className="profile-name-form"><input type="hidden" name="operation" value="name"/><div className="profile-field"><label htmlFor="profile-name">Full name</label><input id="profile-name" name="fullName" defaultValue={profile.fullName} autoComplete="name" required maxLength={200} disabled={pending}/></div><Feedback state={state}/><button type="submit" className="button button-primary" disabled={pending}>{pending?'Saving…':'Save name'}</button></form>
+        <form action={action} className="profile-name-form"><input type="hidden" name="operation" value="name"/><div className="profile-field"><label htmlFor="profile-name">Full name</label><input id="profile-name" name="fullName" defaultValue={profile.fullName} autoComplete="name" required maxLength={200} disabled={pending} aria-busy={pending}/></div><Feedback state={state}/><button type="submit" className="button button-primary" disabled={pending} aria-busy={pending}>{pending&&<Spinner/>}{pending?'Saving…':'Save name'}</button></form>
       </section><section className="profile-section"><h2>Institution details</h2><p className="profile-help">Contact your administrator if these details need correcting.</p><dl className="profile-details"><div><dt>Account type</dt><dd>{role}</dd></div>{profile.role==='student'?<><div><dt>Student ID</dt><dd>{profile.studentId??'Not assigned'}</dd></div><div><dt>Section</dt><dd>{profile.section??'Not assigned'}</dd></div></>:<div><dt>Sign-in email</dt><dd>{profile.email??'Not available'}</dd></div>}</dl></section></>
       :<><section className="profile-section"><h2>Sign-in & security</h2><p className="profile-help">Changes require your current web password.</p><div className="profile-security-row"><div><h3>Password</h3><p>Use a unique password for the dashboard.</p></div><button className="button" onClick={()=>setDialog('password')} aria-haspopup="dialog">Change password</button></div>
         {profile.role==='student'&&<div className="profile-security-row"><div><h3>Legacy four-digit PIN</h3><p>Stored for older builds. Current headset access codes are managed separately.</p></div><button className="button" onClick={()=>setDialog('pin')} aria-haspopup="dialog">Change PIN</button></div>}

@@ -1,7 +1,7 @@
 import {adminDate} from '@/lib/adminPresentation';
 import {setupLinkStatus,type SetupLink} from '@/lib/adminUsers';
 import {AdminUserAction,CopySetupLink} from './AdminUserControls';
-import Link from 'next/link';
+import Link from './LoadingLink';
 import {SendInvitationEmailButton} from './SendInvitationEmailButton';
 import {emailStatusLabel,emailStatusDetail,type InvitationEmailStatus} from '@/lib/invitationEmailPresentation';
 export function SetupLinkPages({page,total,href}:{page:number;total:number;href:string}){return <nav className="admin-pagination" aria-label="Setup links pagination"><span>Page {page} of {Math.max(1,Math.ceil(total/20))}</span><div>{page>1?<Link className="button" scroll={false} href={`${href}?page=${page-1}`}>Previous</Link>:<button className="button" disabled>Previous</button>}{page*20<total?<Link className="button" scroll={false} href={`${href}?page=${page+1}`}>Next</Link>:<button className="button" disabled>Next</button>}</div></nav>;}

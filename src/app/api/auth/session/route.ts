@@ -8,8 +8,12 @@ async function sessionStatus(renew: boolean) {
   const store = await cookies();
   const lease = readDashboardSession(store.get(DASHBOARD_SESSION_COOKIE)?.value);
   const client = await createSupabaseServerClient();
-  const user = lease ? (await client.auth.getUser()).data.user : null;
+  const auth=lease?await client.auth.getUser():null;
+  const user=auth?.data.user??null;
+  const temporaryAuthFailure=auth?.error&&(auth.error.name==='AuthRetryableFetchError'||!auth.error.status||auth.error.status>=500);
+  if(temporaryAuthFailure)return NextResponse.json({error:'Session check unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   const account=user?await client.rpc('is_account_suspended'):null;
+  if(account?.error&&account.error.code!=='PGRST202')return NextResponse.json({error:'Account check unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   if (!lease || user?.id !== lease.userId || account?.data===true || (account?.error&&account.error.code!=='PGRST202') || Date.now() >= dashboardSessionExpiresAt(lease)) {
     const response = NextResponse.json({ authenticated: false }, { status: 401 });
     for (const { name } of store.getAll()) {

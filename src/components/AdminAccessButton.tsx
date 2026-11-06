@@ -1,8 +1,9 @@
 "use client";
+import {Spinner} from './LoadingFeedback';
 import {useId,useRef,useState} from 'react';
 import {Modal} from './Modal';
 import {useFormStatus} from 'react-dom';
-function Submit({active}:{active:boolean}){const {pending}=useFormStatus();return <button type="submit" className={`button ${active?'admin-danger-button':'button-primary'}`} disabled={pending}>{pending?'Saving…':active?'Suspend access':'Restore access'}</button>;}
+function Submit({active}:{active:boolean}){const {pending}=useFormStatus();return <button type="submit" className={`button ${active?'admin-danger-button':'button-primary'}`} disabled={pending} aria-busy={pending}>{pending&&<Spinner/>}{pending?'Saving…':active?'Suspend access':'Restore access'}</button>;}
 export function AdminAccessButton({userId,name,active,action}:{userId:string;name:string;active:boolean;action:(form:FormData)=>Promise<void>}){
  const [open,setOpen]=useState(false);const id=useId();
  const formRef=useRef<HTMLFormElement>(null);

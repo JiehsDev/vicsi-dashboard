@@ -1,3 +1,4 @@
+import {SubmitButton} from '@/components/SubmitButton';
 import { NotificationModal } from "@/components/NotificationModal";
 // src/app/(dashboard)/classes/[classId]/edit/page.tsx
 import Link from "next/link";
@@ -80,12 +81,12 @@ export default async function EditClassPage({
             </p>
           )}
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Saving changes…"
             className="mt-2 rounded-full bg-primary px-5 py-3 text-[13.5px] font-semibold text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
           >
             Save changes
-          </button>
+          </SubmitButton>
         </form>
       </Card>
     </div>

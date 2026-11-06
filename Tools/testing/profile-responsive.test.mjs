@@ -20,7 +20,7 @@ before(async()=>{
  server=createServer(async(req,res)=>{
   if(req.url==='/preview.js'){res.setHeader('Content-Type','text/javascript');res.end(bundle);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
-  if(pathname.startsWith('/brand/') && /^\/brand\/[a-zA-Z0-9_.-]+$/.test(pathname)){res.setHeader('Content-Type','image/png');res.end(await readFile('public'+pathname));return;}
+  if(pathname.startsWith('/brand/') && /^\/brand\/[a-zA-Z0-9_.-]+$/.test(pathname)){res.setHeader('Content-Type',pathname.endsWith('.svg')?'image/svg+xml':'image/png');res.end(await readFile('public'+pathname));return;}
   res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css.css}</style></head><body><div id="preview"></div><script src="/preview.js"></script></body></html>`);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));base=`http://127.0.0.1:${server.address().port}`;

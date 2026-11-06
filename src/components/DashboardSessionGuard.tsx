@@ -2,18 +2,24 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import {isPublicDashboardPath} from '@/lib/dashboardRefresh';
 
 /** User activity renews the lease; status polls, focus and hidden tabs do not. */
-export function DashboardSessionGuard() {
+export function DashboardSessionGuard({initialSession}:{initialSession?:{startedAt:number;expiresAt:number}|null}) {
   const pathname = usePathname();
+  const publicRoute=isPublicDashboardPath(pathname);
+  const sessionStart=initialSession?.startedAt??0;
+  const initialDeadline=initialSession?.expiresAt??0;
   useEffect(() => {
-    if (pathname === "/login" || pathname === "/signup") return;
+    if (publicRoute) return;
     let stopped = false;
     let busy = false;
     let lastActivity = 0;
     let lastRenewal = Date.now();
     let nextStatus = 0;
-    let expiresAt = Infinity;
+    // A trusted server deadline bounds cached data even if the first status
+    // request is offline. Navigation must not reset activity/renewal clocks.
+    let expiresAt = initialDeadline;
     const controller = new AbortController();
 
     async function check() {
@@ -31,6 +37,7 @@ export function DashboardSessionGuard() {
         });
         if (stopped) return;
         if (response.status === 401) {
+          window.dispatchEvent(new Event('vicsi-dashboard-auth-expired'));
           window.location.replace("/login?expired=1");
           return;
         }
@@ -46,7 +53,10 @@ export function DashboardSessionGuard() {
       } catch {
         // A network failure cannot extend the server deadline.
         nextStatus = Date.now() + 15_000;
-        if (!stopped && Date.now() >= expiresAt) window.location.replace("/login?expired=1");
+        if (!stopped && Date.now() >= expiresAt) {
+          window.dispatchEvent(new Event('vicsi-dashboard-auth-expired'));
+          window.location.replace("/login?expired=1");
+        }
       } finally {
         busy = false;
       }
@@ -77,6 +87,6 @@ export function DashboardSessionGuard() {
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("pageshow", visible);
     };
-  }, [pathname]);
+  }, [publicRoute,sessionStart,initialDeadline]);
   return null;
 }

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "./LoadingLink";
 import { BrandLogo } from "./BrandLogo";
 import { LogOut, Search } from "lucide-react";
 import { ConfirmSubmitButton } from "./ConfirmSubmitButton";
