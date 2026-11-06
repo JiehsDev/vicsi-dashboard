@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { Home, ClipboardList, BookOpen, LogOut, UserRound, UsersRound, ChevronDown,ShieldCheck,History,KeyRound } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { BrandLogo } from "./BrandLogo";
+import { ConfirmSubmitButton } from "./ConfirmSubmitButton";
 
 export function AppShell({ role, name, classes=[], onSignOut, children }: {
   role: "student" | "instructor" | "admin"; name: string; classes?:Array<{id:string;name:string;section:string|null;archivedAt:string|null}>; onSignOut?: () => Promise<void>; children: React.ReactNode;
@@ -64,14 +65,15 @@ export function AppShell({ role, name, classes=[], onSignOut, children }: {
         </div>
       </nav>}
       </div>
+      <nav className="profile-sidebar-link" aria-label="Your account"><Link href="/profile" className="sidebar-link" title="My Profile" aria-label="My Profile" aria-current={pathname==='/profile'?'page':undefined}><UserRound size={18} aria-hidden="true" className="nav-icon"/><span className="nav-copy">My Profile</span></Link></nav>
       <div className="sidebar-footer"><span className="nav-copy">Forensic investigation<br/>Evidence. Interpretation. Reflection.</span><button type="button" className="collapse-button" onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar" title="Toggle sidebar">&#9776;</button></div>
     </aside>
     <div className="app-workspace">
       <header className="app-header">
         <div className="header-workspace"><span className="header-brand">ViCSI</span><span className="header-slash" aria-hidden="true">/</span><span className="header-context">{role === "admin"?"System administration":role === "student" ? "Learning record" : "Teaching & assessment"}</span></div>
         <div className="header-account">
-          <div className="header-identity"><span className="header-avatar" aria-hidden="true"><UserRound size={18}/></span><div><span className="header-role">{role === "admin"?"Administrator":role === "student" ? "Student" : "Instructor"}</span><span className="header-name">{name}</span></div></div>
-          <div className="header-controls"><div className="theme-control"><ThemeToggle/></div>{onSignOut && <form action={onSignOut}><button className="signout-button" type="submit"><LogOut size={16} aria-hidden="true"/><span>Sign out</span></button></form>}</div>
+          <Link href="/profile" className="header-identity" title="Manage your profile"><span className="header-avatar" aria-hidden="true"><UserRound size={18}/></span><div><span className="header-role">{role === "admin"?"Administrator":role === "student" ? "Student" : "Instructor"}</span><span className="header-name">{name}</span></div></Link>
+          <div className="header-controls"><div className="theme-control"><ThemeToggle/></div>{onSignOut && <form action={onSignOut}><ConfirmSubmitButton className="signout-button" title="Sign out of ViCSI?" confirmMessage="You’ll return to the sign-in page. You can sign in again to access your dashboard." confirmLabel="Sign out"><LogOut size={16} aria-hidden="true"/><span>Sign out</span></ConfirmSubmitButton></form>}</div>
         </div>
       </header>
       <main id="main-content" className="app-main">{children}</main>

@@ -3,6 +3,7 @@ export type AuditType=typeof AUDIT_TYPES[number];
 export type AuditEvent={id:string;occurred_at:string;actor_name:string;action:string;resource_type:AuditType;resource_name:string;reason:string|null;changes:Record<string,unknown>};
 export type Administrator={user_id:string;full_name:string;active:boolean;created_at:string;updated_at:string};
 const labels:Record<string,string>={
+ 'account.name.updated':'Account name updated','account.password.changed':'Account password changed','account.pin.changed':'Legacy PIN changed','account.sessions.revoked':'Other account sessions signed out',
  'staff.email.requested':'Invitation email requested','staff.email.sent':'Invitation email sent','staff.email.failed':'Invitation email failed','staff.email.unconfirmed':'Invitation email result unconfirmed','staff.email.delivered':'Invitation email delivered','staff.email.delayed':'Invitation email delivery delayed','staff.email.bounced':'Invitation email bounced','staff.email.complained':'Invitation email marked as spam','staff.email.suppressed':'Invitation email suppressed',
  'user.details.updated':'User details updated','user.suspended':'User access suspended','user.restored':'User access restored',
  'staff.invitation.created':'Instructor invitation created','staff.invitation.replaced':'Instructor invitation replaced','staff.invitation.revoked':'Instructor invitation revoked','staff.invitation.accepted':'Instructor invitation accepted',

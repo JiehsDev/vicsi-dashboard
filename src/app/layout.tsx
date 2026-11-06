@@ -13,6 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  icons: {icon: [{url:'/brand/favicon.svg?v=5.5',type:'image/svg+xml',sizes:'any'}]},
   title: "ViCSI · Learning Analytics",
   description:
     "Student learning records and instructor assessment analytics for ViCSI.",

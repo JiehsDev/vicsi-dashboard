@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "./BrandLogo";
 import { LogOut, Search } from "lucide-react";
+import { ConfirmSubmitButton } from "./ConfirmSubmitButton";
 
 // Two real destinations: Results (/class-results - reporting/analytics) and
 // Classes (/classes - create/edit/archive classes, manage enrollment). The
@@ -73,13 +74,14 @@ export function TopNav({
               Instructor: <span className="font-medium text-ink">{userEmail ?? "—"}</span>
             </div>
             <form action={onSignOut}>
-              <button
-                type="submit"
-                aria-label="Sign out"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-tint hover:text-ink"
+              <ConfirmSubmitButton
+                title="Sign out of ViCSI?"
+                confirmMessage="You’ll return to the sign-in page. You can sign in again to access your dashboard."
+                confirmLabel="Sign out"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-tint hover:text-ink"
               >
-                <LogOut size={14} />
-              </button>
+                <LogOut size={14} aria-hidden="true"/><span className="sr-only">Sign out</span>
+              </ConfirmSubmitButton>
             </form>
           </div>
         </div>

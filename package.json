@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "seed:demo": "node --env-file=.env.local --import ./Tools/testing/register-tsx.mjs supabase/seed/seed-dashboard-demo.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

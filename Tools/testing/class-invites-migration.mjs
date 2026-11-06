@@ -30,7 +30,16 @@ try{
  if(!rows[0].classes||!rows[0].rate_limit||!rows[0].ownership)throw new Error('Database prerequisites are missing.');
  console.log('Database prerequisites verified. Existing invitation schema:',rows[0].invitations);
  if(process.argv.includes('--apply')){
-   if(process.argv.includes('--invitation-email')){
+   if(process.argv.includes('--profiles')){
+     await client.query(await readFile(new URL('../../supabase/migrations/025_self_service_profiles.sql',import.meta.url),'utf8'));
+     const result=await client.query(`select
+       has_function_privilege('authenticated','public.get_my_account_profile()','execute') as own_profile,
+       not has_function_privilege('anon','public.get_my_account_profile()','execute') as anonymous_denied,
+       not has_function_privilege('authenticated','public.change_verified_student_pin(uuid,text)','execute') as pin_server_only,
+       not has_function_privilege('authenticated','public.record_account_security_event(uuid,text)','execute') as audit_server_only`);
+     if(Object.values(result.rows[0]).some(value=>!value))throw new Error('Profile permission verification failed.');
+     console.log('Migration 025 applied. Profile permissions verified. No account credentials or gameplay records changed.');
+   }else if(process.argv.includes('--invitation-email')){
      await client.query(await readFile(new URL('../../supabase/migrations/024_invitation_email_delivery.sql',import.meta.url),'utf8'));
      const result=await client.query(`select
        has_function_privilege('authenticated','public.admin_begin_invitation_email(uuid,text,text)','execute') as send_guard,

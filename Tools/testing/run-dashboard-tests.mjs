@@ -3,6 +3,8 @@ import {createRequire} from 'node:module';
 
 const require=createRequire(import.meta.url);
 const checks=[
+ {label:'Synthetic demo session scoring, documentation and deterministic identities',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/dashboardDemoSeed.test.ts']},
+ {label:'Self-service profile ownership, credentials and session actions',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/profileManagement.test.ts']},
  {label:'Resend invitation payload and transport outcomes',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/invitationEmail.test.ts']},
  {label:'Resend signed callback verification and retries',env:{VICSI_EMAIL_WEBHOOK_TESTS:'1'},args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/invitationEmailWebhook.test.ts']},
  {label:'One-use account setup, encryption and Auth rollback safety',args:['--import','./Tools/testing/register-tsx.mjs','--test','src/lib/__tests__/accountSetup.test.ts']},

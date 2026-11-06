@@ -25,6 +25,20 @@ before(async()=>{
 });
 after(async()=>{socket?.close();browser?.kill();await new Promise(r=>server?.close(r));});
 async function visit(page,width=1366){await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<640});await call('Page.navigate',{url:`${base}/${page}`});for(let n=0;n<100;n++){const ready=await call('Runtime.evaluate',{expression:`document.readyState==='complete'&&document.querySelector('.theme-control')?.dataset.themeReady==='true'`});if(ready.result.value)return;await pause(20);}assert.fail('Theme control did not hydrate');}
+for(const role of ['student','instructor','admin'])for(const width of [375,1440])test(`logout confirmation for ${role} at ${width}px preserves the session until confirmed`,async()=>{
+ await visit(`instructor-sidebar?role=${role}`,width);
+ const evaluate=async expression=>(await call('Runtime.evaluate',{expression})).result.value;
+ for(const theme of ['light','dark']){
+  await evaluate(`document.documentElement.dataset.theme='${theme}';document.querySelector('.signout-button').click()`);await pause(30);
+  let state=JSON.parse(await evaluate(`JSON.stringify({open:!!document.querySelector('dialog:modal'),title:document.querySelector('dialog:modal h2')?.textContent,count:document.querySelector('#signout-count').textContent,focus:document.activeElement?.textContent,overflow:document.documentElement.scrollWidth>innerWidth+1})`));
+  assert.deepEqual(state,{open:true,title:'Sign out of ViCSI?',count:'0',focus:'Cancel',overflow:false});
+  const contrast=await evaluate(`(()=>{const button=document.querySelector('dialog:modal .button-primary'),rgb=s=>s.match(/[\\d.]+/g).map(Number),lum=c=>c.slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0),style=getComputedStyle(button),a=lum(rgb(style.color)),b=lum(rgb(style.backgroundColor));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);})()`);assert.ok(contrast>=4.5,`${theme}: ${contrast}`);
+  if(role==='student'){const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(path.join(out,`logout-${theme}-${width}.png`),Buffer.from(shot.data,'base64'));}
+  await evaluate(`document.querySelector('dialog:modal button').click()`);await pause(20);assert.equal(await evaluate(`document.querySelector('#signout-count').textContent`),'0');assert.equal(await evaluate(`document.activeElement===document.querySelector('.signout-button')`),true);
+  await evaluate(`document.querySelector('.signout-button').click()`);await pause(20);await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await pause(20);assert.equal(await evaluate(`!!document.querySelector('dialog:modal')`),false);assert.equal(await evaluate(`document.querySelector('#signout-count').textContent`),'0');
+ }
+ await evaluate(`document.querySelector('.signout-button').click()`);await pause(20);await evaluate(`document.querySelector('dialog:modal .button-primary').click()`);await pause(100);assert.equal(await evaluate(`document.querySelector('#signout-count').textContent`),'1');assert.equal(await evaluate(`!!document.querySelector('dialog:modal')`),false);
+});
 for(const page of ['admin-users','admin-user-detail','admin-invitations'])for(const width of [375,768,1440,1920])test(`stage 2 ${page} at ${width}px uses readable responsive account controls`,async()=>{
  await visit(page,width);
  for(const theme of ['light','dark']){

@@ -39,9 +39,12 @@ if(pagination){
 }
 
 function InstructorSidebarPreview() {
+  const [signOutCount,setSignOutCount]=useState(0);
+  const previewRole=new URLSearchParams(window.location.search).get('role');
+  const role=previewRole==='student'||previewRole==='admin'?previewRole:'instructor';
   useEffect(()=>{const control=document.querySelector<HTMLElement>(".theme-control");if(control)control.dataset.themeReady="true";},[]);
   const classes=Array.from({length:18},(_,i)=>({id:`class-${i+1}`,name:i===3?"Crime scene documentation, investigation and evidence handling":`Class ${String(i+1).padStart(2,"0")}`,section:`Section ${i+1}`,archivedAt:i>=16?"2026-10-01":null}));
-  return <AppShell role="instructor" name="Dev Instructor (Test)" classes={classes} onSignOut={async()=>{}}><h1>Class sidebar navigation</h1><p>Local interaction fixture; no database or authentication writes.</p></AppShell>;
+  return <AppShell role={role} name="Dev Instructor (Test)" classes={classes} onSignOut={async()=>{setSignOutCount(count=>count+1);}}><h1>Class sidebar navigation</h1><p>Local interaction fixture; no database or authentication writes.</p><p id="signout-count">{signOutCount}</p></AppShell>;
 }
 const sidebar=document.getElementById("instructor-shell-root");
 if(sidebar)createRoot(sidebar).render(<InstructorSidebarPreview/>);
