@@ -69,7 +69,7 @@ test("student and professor render the same compact Recorder section and separat
  const result=resultFor(currentInput());result.events.push(report(0,2),report(1),report(2,1),report(3));
  for(const instructor of [false,true]){const html=renderToStaticMarkup(<SessionRecord result={result} instructor={instructor}/>);
   assert.match(html,/Recorder Documentation Score/);assert.match(html,/18 \/ 24/);assert.match(html,/Deduction score/);assert.match(html,/100%/);
-  const section=html.slice(html.indexOf("Recorder Documentation"),html.indexOf("Deduction questions"));
+  const section=html.match(/<section id="recorder-documentation"[\s\S]*?<\/section>/)?.[0]??"";
   assert.equal((section.match(/Subtotal:/g)??[]).length,4);assert.equal((section.match(/points<\/span>/g)??[]).length,12);
   assert.doesNotMatch(section,/rec-body-|rec-knife-|rec-spatter-|rec-bottle-/);}
 });

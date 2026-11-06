@@ -31,7 +31,9 @@ export function procedureTimeline(events:ScoringSessionEvent[]):ProcedureRecord[
     seen.add(e.sequenceNumber);
     if(recordedSubjects.has(e.targetId)&&(e.eventType==="BodyDocumentationRecorded"
       ||e.eventType==="EvidenceStatusChanged"&&payloadValue(e,"status")==="Logged"))continue;
-    const template=e.eventType==="EvidenceStatusChanged"
+    const template=e.eventType==="SamplePackaged"&&payloadValue(e,"workflow")==="swab-dry-before-containment-v1"
+      ?"Inserted the dried cotton swab from {target} into its evidence container"
+      :e.eventType==="EvidenceStatusChanged"
       ?definition.statuses.find(s=>s.id===payloadValue(e,"status"))?.description
       :definition.events.find(s=>s.id===e.eventType)?.description;
     if(!template)continue;

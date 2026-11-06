@@ -6,6 +6,23 @@ import {StudentHome} from "../../components/StudentHome.tsx";
 import {StudentSessionsEmpty,HeadsetGuide} from "../../components/StudentGuidance.tsx";
 import {SessionRecord} from "../../components/SessionRecord.tsx";
 import {currentResult} from "./sessionRecord.fixture.ts";
+import {PaginatedSessions} from "../../components/PaginatedSessions.tsx";
+
+test("sessions show five rows per page and preserve filters in navigation",()=>{
+ const rows=Array.from({length:12},(_,i)=>({...currentResult(),sessionId:`attempt-${i+1}`}));
+ const render=(page:string)=>renderToStaticMarkup(<PaginatedSessions rows={rows} query={{page,q:"blood evidence",includeTests:"true"}}/>);
+ const first=render("1"),middle=render("2"),last=render("3");
+ assert.equal((first.match(/class="session-view"/g)??[]).length,5);
+ assert.match(first,/Showing 1–5 of 12 sessions/);assert.doesNotMatch(first,/href="\/results\/attempt-6"/);
+ assert.match(first,/aria-disabled="true">[\s\S]*?Previous<\/span>/);
+ assert.match(first,/q=blood\+evidence/);assert.match(first,/includeTests=true/);assert.match(first,/page=2/);
+ assert.match(middle,/Showing 6–10 of 12 sessions/);assert.match(middle,/href="\/results\/attempt-6"/);assert.doesNotMatch(middle,/href="\/results\/attempt-1"/);
+ assert.match(last,/Showing 11–12 of 12 sessions/);assert.match(last,/aria-disabled="true">Next/);
+ assert.equal((last.match(/class="session-view"/g)??[]).length,2);
+ for(const invalid of ["-1","oops","1.5"])assert.match(render(invalid).replace(/<[^>]*>/g,""),/Page 1 of 3/);
+ assert.match(render("999").replace(/<[^>]*>/g,""),/Page 3 of 3/);
+ assert.doesNotMatch(renderToStaticMarkup(<PaginatedSessions rows={rows.slice(0,5)} query={{}}/>),/Session pages/);
+});
 
 test("first visit gives real headset instructions without a fake grade or upload state",()=>{
  const html=renderToStaticMarkup(<StudentHome name="Ana Reyes" rows={[]} latestDetail={null}/>);

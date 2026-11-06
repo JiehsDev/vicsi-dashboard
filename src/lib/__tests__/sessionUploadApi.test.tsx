@@ -40,21 +40,38 @@ test('student list/detail and instructor class/student detail use the same store
  assert.equal((await getMyResultSummaries()).length,1);assert.match(renderToStaticMarkup(await StudentPage({searchParams:Promise.resolve({includeTests:'true'})})),/My Sessions/);
  const own=renderToStaticMarkup(await StudentSessionPage({params:Promise.resolve({sessionId:String(body.sessionId)})}));assert.match(own,/Student answer/);
  s.role='instructor';s.profile={role:'instructor',fullName:'Fixture professor'};s.caller='fixture-professor';
- assert.equal((await getInstructorResultSummaries()).length,1);const list=renderToStaticMarkup(await InstructorPage({searchParams:Promise.resolve({})}));assert.match(list,/Class Results/);assert.match(list,/View/);
+ assert.equal((await getInstructorResultSummaries()).length,1);const list=renderToStaticMarkup(await InstructorPage({searchParams:Promise.resolve({})}));assert.match(list,/Recent Sessions/);assert.match(list,/View/);
  const instructor=renderToStaticMarkup(await InstructorSessionPage({params:Promise.resolve({sessionId:String(body.sessionId)})}));assert.equal((instructor.match(/class="assessment-question"/g)??[]).length,13);assert.match(instructor,/100%/);
  const history=renderToStaticMarkup(await StudentHistoryPage({params:Promise.resolve({studentId:'fixture-student'})}));assert.match(history,/Sessions/);assert.match(history,/View/);
+});
+
+test('instructor recent sessions retain repeated attempts and paginate across all students',async()=>{
+ const state=resetFixture();await POST(request(payload()));
+ const first=state.sessions[0];
+ for(let i=1;i<7;i++)state.sessions.push({...first,session_id:`repeat-${i}`,assignment_id:null});
+ state.role='instructor';state.profile={role:'instructor',fullName:'Fixture professor'};state.caller='fixture-professor';
+ const one=renderToStaticMarkup(await InstructorPage({searchParams:Promise.resolve({})}));
+ const two=renderToStaticMarkup(await InstructorPage({searchParams:Promise.resolve({page:'2'})}));
+ assert.equal((one.match(/class="session-view"/g)??[]).length,5);
+ assert.equal((two.match(/class="session-view"/g)??[]).length,2);
+ assert.match(one,/Showing 1–5 of 7 sessions/);assert.match(two,/Showing 6–7 of 7 sessions/);
+ assert.match(one,/href="\/class-results\?page=2"/);
+ assert.doesNotMatch(one,/Latest matching|Assignments|Latest attempt/);
 });
 
 test('new procedure records survive upload and both detail routes without changing deduction points',async()=>{
  const baseline=resetFixture();assert.equal((await POST(request(payload()))).status,200);
  const categories=baseline.categories.map(c=>[c.category_key,c.category_value,c.source]);
  const state=resetFixture(),body=payload(),events=body.orderedEvents as ScoringSessionEvent[];
- const types=['SceneLogSigned','PPEEquipped','UsedGlovesDisposed','FreshGlovesEquipped','FreshSwabLoaded','PhotographicScaleCaptured','SampleDryingCompleted','SamplePackaged','FingerprintPracticeCompleted'];
+ const types=['SceneLogSigned','PPEEquipped','UsedGlovesDisposed','FreshGlovesEquipped','FreshSwabLoaded','PhotographicScaleCaptured','SampleDryingCompleted','SamplePackaged','FingerprintPracticeCompleted','FingerprintLabSubmitted','FingerprintLabReportOpened'];
  // Unity fixture tests the real minimal-upload filter. Without a local Unity checkout,
  // the same contract remains covered by explicit source-specific records.
  const recorded:ScoringSessionEvent[]=project
   ?JSON.parse(readFileSync(join(project,'docs/evidence/dashboard-workflow-refresh-2026-10-20/procedure-events-wire.json'),'utf8')).orderedEvents
   :types.map((eventType,i)=>({sequenceNumber:i,timestampMs:i*1000,eventType,targetId:'EVD-015',payload:[]}));
+ for(const eventType of ['FingerprintLabSubmitted','FingerprintLabReportOpened'])
+  if(!recorded.some(e=>e.eventType===eventType)) recorded.push({sequenceNumber:0,timestampMs:200000,eventType,targetId:'EVD-018',payload:[{key:'workflow',value:'fingerprint-lab-reports-v1'},{key:'scored',value:'false'}]});
+ recorded.push(...['SampleDryingRetrieved','SamplePackaged'].map(eventType=>({sequenceNumber:0,timestampMs:200001,eventType,targetId:'EVD-014',payload:[{key:'workflow',value:'swab-dry-before-containment-v1'},{key:'scored',value:'false'}]})));
  const next=Math.max(...events.map(e=>e.sequenceNumber))+1;
  events.push(...recorded.map((e,i)=>({...e,sequenceNumber:next+i})));
  assert.equal((await POST(request(body))).status,200);
@@ -65,7 +82,7 @@ test('new procedure records survive upload and both detail routes without changi
   if(instructor){state.role='instructor';state.profile={role:'instructor',fullName:'Fixture professor'};state.caller='fixture-professor';}
   const page=instructor?await InstructorSessionPage({params:Promise.resolve({sessionId:String(body.sessionId)})}):await StudentSessionPage({params:Promise.resolve({sessionId:String(body.sessionId)})});
   const html=renderToStaticMarkup(page);
-  for(const text of ['check-in','fresh swab','photographic scale','simulated drying','in paper','optional fingerprint comparison','unscored'])assert.ok(html.includes(text),text);
+  for(const text of ['check-in','fresh swab','photographic scale','simulated drying','in paper','optional fingerprint comparison','simulated lab examination','simulated fingerprint lab report','Retrieved the dried cotton swab','into its evidence container','unscored'])assert.ok(html.includes(text),text);
   assert.match(html,/100%/);assert.doesNotMatch(html,/EVD-\d+/);
  }
 });

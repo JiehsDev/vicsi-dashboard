@@ -6,8 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { looksLikeEmail, studentIdToEmail } from "@/lib/studentAuth";
 import { cookies } from "next/headers";
 import { DASHBOARD_SESSION_COOKIE, dashboardCookieOptions, encodeDashboardSession, isSupabaseAuthCookie } from "@/lib/dashboardSession";
+import {classJoinReturnPath} from "@/lib/classInvites";
 
 export async function signIn(formData: FormData) {
+  const next=classJoinReturnPath(formData.get("next"));
   // Accepts either an email (instructors) or a Student ID (students) in
   // the same field. A Student ID has no '@', so it's translated to the
   // same internal-only email studentIdToEmail() produced at signup —
@@ -25,7 +27,13 @@ export async function signIn(formData: FormData) {
   });
 
   if (error || !data.user) {
-    redirect(`/login?error=${encodeURIComponent("Incorrect credentials.")}`);
+    redirect(`/login?error=${encodeURIComponent("Incorrect credentials.")}${next?`&next=${encodeURIComponent(next)}`:""}`);
+  }
+
+  const suspended=await supabase.rpc('is_account_suspended');
+  if(suspended.data===true || (suspended.error&&suspended.error.code!=='PGRST202')) {
+    await supabase.auth.signOut({scope:'local'});
+    redirect(`/login?error=${encodeURIComponent(suspended.data===true?'Your account is suspended. Contact your administrator.':'Account access could not be checked. Please try again.')}`);
   }
 
   const now = Date.now();
@@ -33,7 +41,7 @@ export async function signIn(formData: FormData) {
   cookieStore.set(DASHBOARD_SESSION_COOKIE, encodeDashboardSession({
     userId: data.user.id, startedAt: now, activeAt: now,
   }), dashboardCookieOptions());
-  redirect("/");
+  redirect(next??"/");
 }
 
 export async function signOut() {

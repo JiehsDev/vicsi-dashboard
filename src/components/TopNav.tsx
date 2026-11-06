@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 import { LogOut, Search } from "lucide-react";
 
 // Two real destinations: Results (/class-results - reporting/analytics) and
@@ -42,14 +43,7 @@ export function TopNav({
     <header className="border-b border-border bg-surface">
       <div className="mx-auto max-w-[1220px] px-6 sm:px-10">
         <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[12px] font-bold text-white">
-              VR
-            </div>
-            <div className="text-[15px] font-extrabold tracking-tight text-ink">
-              ViCSI
-            </div>
-          </div>
+          <Link href="/class-results" className="topnav-brand" aria-label="ViCSI dashboard home"><BrandLogo/></Link>
 
           <nav className="flex items-center gap-4 text-[13px] font-medium">
             <Link href="/class-results" className={pathname.startsWith("/class-results") ? "text-ink" : "text-ink-muted hover:text-ink"}>
@@ -58,9 +52,7 @@ export function TopNav({
             <Link href="/classes" className={pathname.startsWith("/classes") ? "text-ink" : "text-ink-muted hover:text-ink"}>
               Classes
             </Link>
-            <Link href="/assignments" className={pathname.startsWith("/assignments") ? "text-ink" : "text-ink-muted hover:text-ink"}>
-              Assignments
-            </Link>
+
           </nav>
 
           <div className="flex items-center gap-3">

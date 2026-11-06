@@ -3,9 +3,18 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { timeoutFetch } from "@/lib/timeoutFetch";
 import { DASHBOARD_SESSION_COOKIE, dashboardCookieOptions, isSupabaseAuthCookie, readDashboardSession } from "@/lib/dashboardSession";
+import {classJoinReturnPath} from "@/lib/classInvites";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  // Login and signup must be able to load the same public branding as the dashboard.
+  if (pathname.startsWith("/brand/")) return NextResponse.next();
+  if (pathname === "/account/setup") {
+    const response=NextResponse.next();
+    response.headers.set('Cache-Control','no-store');
+    response.headers.set('Referrer-Policy','no-referrer');
+    return response;
+  }
   // Never redirect or impose dashboard timeouts on device/bearer APIs.
   // Browser API handlers still enforce the lease in supabaseServer.ts.
   if (pathname.startsWith("/api/")) return NextResponse.next();
@@ -33,7 +42,12 @@ export async function proxy(request: NextRequest) {
     });
     try {
       const { data } = await supabase.auth.getUser();
-      if (data.user?.id === lease.userId) user = data.user;
+      if (data.user?.id === lease.userId) {
+        const suspended=await supabase.rpc('is_account_suspended');
+        // Older deployments without migration 023 keep their existing access;
+        // other backend failures must not silently grant access.
+        if(suspended.data===false || suspended.error?.code==='PGRST202')user=data.user;
+      }
     } catch (error) {
       console.error("[proxy] Supabase auth check failed:", error);
     }
@@ -47,6 +61,8 @@ export async function proxy(request: NextRequest) {
     }
     if (!isLoginPage && !isSignupPage) {
       const url = new URL("/login", request.url);
+      const next=classJoinReturnPath(pathname+request.nextUrl.search);
+      if(next)url.searchParams.set("next",next);
       if (authCookies.length || lease) url.searchParams.set("expired", "1");
       response = NextResponse.redirect(url);
     } else {
@@ -62,7 +78,7 @@ export async function proxy(request: NextRequest) {
       if (!response.cookies.has(cookie.name)) response.cookies.set(cookie.name, cookie.value, dashboardCookieOptions());
     }
     if (isLoginPage || isSignupPage) {
-      const redirect = NextResponse.redirect(new URL("/", request.url));
+      const redirect = NextResponse.redirect(new URL(classJoinReturnPath(request.nextUrl.searchParams.get("next"))??"/", request.url));
       response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
       response = redirect;
     }
@@ -72,5 +88,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/).*)"],
 };

@@ -2,6 +2,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import {revalidatePath} from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { friendlyClassRpcError } from "@/lib/classes";
 
@@ -52,6 +53,7 @@ export async function createClassAction(formData: FormData) {
   }
 
   const row = Array.isArray(data) ? data[0] : data;
+  revalidatePath("/", "layout");
   redirect(`/classes/${encodeURIComponent(row.id)}?created=1`);
 }
 
@@ -78,9 +80,14 @@ export async function updateClassAction(formData: FormData) {
   });
 
   if (error) {
+    if(formData.get("returnTo")==="manage-class"){
+      const query=new URLSearchParams({manage:"1",error:friendlyClassRpcError(error.message),name,section,academicYear,semester});
+      redirect(`/classes/${encodeURIComponent(classId)}?${query}`);
+    }
     redirect(`/classes/${encodeURIComponent(classId)}/edit?error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
   }
 
+  revalidatePath("/", "layout");
   redirect(`/classes/${encodeURIComponent(classId)}?updated=1`);
 }
 
@@ -97,9 +104,10 @@ export async function archiveClassAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/classes/${encodeURIComponent(classId)}?error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
+    redirect(`/classes/${encodeURIComponent(classId)}?${formData.get("returnTo")==="manage-class"?"manage=1&":""}error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
   }
 
+  revalidatePath("/", "layout");
   redirect(`/classes/${encodeURIComponent(classId)}?${archive ? "archived" : "restored"}=1`);
 }
 
@@ -116,7 +124,11 @@ export async function enrollStudentAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/classes/${encodeURIComponent(classId)}?error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
+    if(formData.get("returnTo")==="enroll-student"){
+      const query=new URLSearchParams({enroll:"1",error:friendlyClassRpcError(error.message),studentNumber});
+      redirect(`/classes/${encodeURIComponent(classId)}?${query}`);
+    }
+    redirect(`/classes/${encodeURIComponent(classId)}?${formData.get("returnTo")==="manage-class"?"manage=1&":""}error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
   }
 
   redirect(`/classes/${encodeURIComponent(classId)}?enrolled=1`);
@@ -135,8 +147,18 @@ export async function removeStudentAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/classes/${encodeURIComponent(classId)}?error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
+    redirect(`/classes/${encodeURIComponent(classId)}?${formData.get("returnTo")==="manage-class"?"manage=1&":""}error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
   }
 
   redirect(`/classes/${encodeURIComponent(classId)}?removed=1`);
+}
+
+export async function manageClassInviteAction(formData:FormData){
+  const db=await requireSignedIn();const classId=String(formData.get("classId")??"");
+  if(!classId)redirect("/classes");
+  const action=String(formData.get("inviteAction")??"");
+  const {error}=await db.rpc("manage_class_invitation",{p_class_id:classId,p_action:action});
+  if(error)redirect(`/classes/${encodeURIComponent(classId)}?enroll=1&error=${encodeURIComponent(friendlyClassRpcError(error.message))}`);
+  revalidatePath("/","layout");
+  redirect(`/classes/${encodeURIComponent(classId)}?enroll=1&inviteChanged=1`);
 }

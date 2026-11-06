@@ -29,6 +29,7 @@ export type ApiErrorCode =
   | "STUDENT_DISABLED"
   | "SESSION_OWNER_MISMATCH"
   | "NO_ASSIGNMENT"
+  | "NO_CLASS_ENROLLMENT"
   | "NOT_FOUND";
 
 const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
@@ -55,6 +56,7 @@ const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   STUDENT_DISABLED: 403,
   SESSION_OWNER_MISMATCH: 409,
   NO_ASSIGNMENT: 409,
+  NO_CLASS_ENROLLMENT: 409,
   NOT_FOUND: 404,
 };
 

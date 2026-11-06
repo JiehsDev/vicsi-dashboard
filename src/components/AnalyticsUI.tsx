@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type {CSSProperties} from "react";
 
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode }) {
   return <div className="page-heading"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{action}</div>;
@@ -13,7 +14,7 @@ export function Status({ children, tone = "neutral" }: { children: React.ReactNo
   return <span className={`status status-${tone}`}>{children}</span>;
 }
 export function MetricStrip({ metrics }: { metrics: Array<{ label: string; value: string | number; note?: string }> }) {
-  return <dl className="metric-strip">{metrics.map(m => <div key={m.label}><dt>{m.label}</dt><dd>{m.value}</dd>{m.note && <p>{m.note}</p>}</div>)}</dl>;
+  return <dl className="metric-strip" style={{"--metric-count":Math.max(1,metrics.length)} as CSSProperties}>{metrics.map(m => <div key={m.label}><dt>{m.label}</dt><dd>{m.value}</dd>{m.note && <p>{m.note}</p>}</div>)}</dl>;
 }
 export function BarList({ rows, empty = "No assessed observations in this selection.", countLabel = "records" }: { rows: Array<{ id: string; label: string; value: number; maximum?: number; detail?: string; href?: string }>; empty?: string; countLabel?: string }) {
   if (!rows.length) return <EmptyState>{empty}</EmptyState>;

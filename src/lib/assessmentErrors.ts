@@ -24,6 +24,7 @@ const KNOWN_RPC_CODES: ReadonlySet<ApiErrorCode> = new Set([
   "STUDENT_DISABLED",
   "SESSION_OWNER_MISMATCH",
   "NO_ASSIGNMENT",
+  "NO_CLASS_ENROLLMENT",
 ]);
 
 export interface ParsedRpcError {

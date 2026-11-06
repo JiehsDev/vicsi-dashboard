@@ -10,7 +10,6 @@ export function ThemeToggle() {
   const label=`Switch to ${dark?"light":"dark"} mode`;
   return <button type="button" className="theme-toggle" aria-label={label} title={label}
     onClick={()=>setTheme(currentTheme()==="dark"?"light":"dark")}>
-    {dark?<Sun size={16} aria-hidden="true"/>:<Moon size={16} aria-hidden="true"/>}
-    <span>{dark?"Light mode":"Dark mode"}</span>
+    {dark?<Sun size={20} aria-hidden="true"/>:<Moon size={20} aria-hidden="true"/>}
   </button>;
 }

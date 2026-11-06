@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { signOut } from "@/app/login/actions";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getMyProfile } from "@/lib/supabaseClient";
+import {getInstructorClasses} from "@/lib/classes";
+import {getAdminIdentity} from "@/lib/admin";
 
 export default async function DashboardLayout({
   children,
@@ -24,15 +26,17 @@ export default async function DashboardLayout({
 
   // Students enter through Home under the separately protected /results layout.
   // Existing /results bookmarks still open their searchable session history.
+  if(await getAdminIdentity())redirect('/admin');
   const profile = await getMyProfile();
   if (!profile) redirect("/login");
   if (profile?.role === "student") {
     redirect("/results/home");
   }
 
+  const classes=await getInstructorClasses();
   return (
     <Suspense fallback={<p className="p-8">Loading workspace…</p>}>
-      <AppShell role="instructor" name={profile?.fullName ?? userEmail ?? "Instructor"} onSignOut={signOut}>{children}</AppShell>
+      <AppShell role="instructor" name={profile?.fullName ?? userEmail ?? "Instructor"} classes={classes} onSignOut={signOut}>{children}</AppShell>
     </Suspense>
   );
 }

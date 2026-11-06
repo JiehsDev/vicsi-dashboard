@@ -1,12 +1,19 @@
+import { NotificationModal } from "@/components/NotificationModal";
 // src/app/(dashboard)/classes/[classId]/page.tsx
 import Link from "next/link";
-import { ArrowLeft, Pencil, Archive, ArchiveRestore, Plus } from "lucide-react";
+import { ArrowLeft, Archive, ArchiveRestore } from "lucide-react";
 import { getClassDetail } from "@/lib/classes";
-import { archiveClassAction, enrollStudentAction, removeStudentAction } from "../actions";
+import { ClassRoster } from "@/components/ClassRoster";
+import { Section } from "@/components/AnalyticsUI";
+import { archiveClassAction, enrollStudentAction, removeStudentAction, updateClassAction } from "../actions";
 import { Card } from "@/components/Card";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
-import { AssignmentStatusBadge } from "@/components/AssignmentStatusBadge";
 import { formatAcademicPeriod } from "@/components/AcademicPeriodFields";
+import {ManageClassButton,EnrollStudentButton} from "@/components/ManageClassButton";
+import {ClassDetailsFields} from "@/components/ClassDetailsFields";
+import {getClassInvite} from "@/lib/classInvitesServer";
+import {ClassInviteShare} from "@/components/ClassInviteShare";
+import {manageClassInviteAction} from "../actions";
 
 const SUCCESS_MESSAGES: Record<string, string> = {
   created: "Class created.",
@@ -25,7 +32,7 @@ export default async function ClassDetailPage({
   searchParams: Promise<{ error?: string } & Record<string, string | undefined>>;
 }) {
   const { classId } = await params;
-  const { error, ...rest } = await searchParams;
+  const { error, manage, enroll, ...rest } = await searchParams;
   const successKey = Object.keys(SUCCESS_MESSAGES).find((k) => rest[k] === "1");
 
   const detail = await getClassDetail(classId);
@@ -41,21 +48,83 @@ export default async function ClassDetailPage({
     );
   }
 
+
+  const editFormId=`edit-class-${classId}`;
+  const enrollmentFormId=`enroll-student-${classId}`;
+  const {invite,unavailable:inviteUnavailable}=detail.archivedAt?{invite:null,unavailable:false}:await getClassInvite(classId);
+  const editingValues=manage==="1"&&error?{
+    name:rest.name??detail.name,section:rest.section??detail.section,
+    academicYear:rest.academicYear??detail.academicYear,semester:rest.semester??detail.semester,
+  }:detail;
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
         <BackLink />
+
+      </div>
+
+      <div className="class-detail-heading">
+        <div className="class-detail-heading-copy">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-primary">Classes</div>
+          <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">{detail.name}</h1>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            {detail.section ? `Section ${detail.section}` : "No section set"}
+            {formatAcademicPeriod(detail.academicYear, detail.semester) && (
+              <>
+                {" · "}
+                {formatAcademicPeriod(detail.academicYear, detail.semester)}
+              </>
+            )}
+          </p>
+        {detail.archivedAt && (
+          <span className="inline-flex items-center rounded-full bg-ink-subtle/10 px-3 py-1.5 text-[12px] font-semibold text-ink-subtle">
+            Archived {new Date(detail.archivedAt).toLocaleDateString()}
+          </span>
+        )}
+        </div>
+
+      <div className="class-detail-actions">
+      {!detail.archivedAt && <EnrollStudentButton key={`enroll:${crypto.randomUUID()}`} formId={enrollmentFormId} initialOpen={enroll==="1"} closeHref={enroll==="1"?`/classes/${encodeURIComponent(classId)}`:undefined}>
+        {error&&enroll==="1"&&<p className="notice" role="alert">{error}</p>}
+        {rest.inviteChanged==="1"&&<p className="notice" role="status">Class invitation updated.</p>}
+        <h3 className="enrollment-section-title">Add by student number</h3>
+        <form id={enrollmentFormId} action={enrollStudentAction} className="class-details-fields">
+          <input type="hidden" name="classId" value={classId}/>
+          <input type="hidden" name="returnTo" value="enroll-student"/>
+          <div>
+            <label htmlFor="studentNumber">Student number</label>
+            <input id="studentNumber" name="studentNumber" type="text" required maxLength={100} placeholder="e.g. 2099-00001" defaultValue={enroll==="1"?rest.studentNumber??"":""} autoComplete="off"/>
+          </div>
+        </form>
+        <section className="enrollment-share-section" aria-label="Share class invite">
+          <h3 className="enrollment-section-title">Share class invite</h3>
+          {inviteUnavailable?<p>Class invites are temporarily unavailable. You can still enroll students by student number.</p>:invite?<>
+            <ClassInviteShare code={invite.join_code} token={invite.invite_token} enabled={invite.enabled}/>
+            <div className="invite-management-actions">
+              <form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value={invite.enabled?"disable":"enable"}/><button className="button" type="submit">{invite.enabled?"Turn invites off":"Turn invites on"}</button></form>
+              <form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value="reset"/><ConfirmSubmitButton className="button" title="Replace class invitation?" confirmLabel="Replace invitation" confirmMessage="The old code, link and QR code will stop working. Enrolled students will stay in the class.">Replace code &amp; link</ConfirmSubmitButton></form>
+            </div>
+          </>:<><p>Let students enroll themselves with a class code, invite link, or QR code.</p><form action={manageClassInviteAction}><input type="hidden" name="classId" value={classId}/><input type="hidden" name="inviteAction" value="create"/><button className="button" type="submit">Create class invite</button></form></>}
+        </section>
+      </EnrollStudentButton>}
+      {/* Reset dialog state on every server response, including repeated saves. */}
+      <ManageClassButton key={crypto.randomUUID()} formId={editFormId} initialOpen={manage==="1"} closeHref={manage==="1"?`/classes/${encodeURIComponent(classId)}`:undefined}>
+        {error&&manage==="1"&&<p className="notice" role="alert">{error}</p>}
+        <form id={editFormId} action={updateClassAction} className="class-settings-form">
+          <input type="hidden" name="classId" value={classId}/>
+          <input type="hidden" name="returnTo" value="manage-class"/>
+          <ClassDetailsFields {...editingValues}/>
+        </form>
+        <details className="class-management-more">
+          <summary>Enrollment and class status</summary>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/classes/${encodeURIComponent(classId)}/edit`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-primary/40 hover:text-ink"
-          >
-            <Pencil size={14} /> Edit
-          </Link>
           <form action={archiveClassAction}>
             <input type="hidden" name="classId" value={classId} />
+            <input type="hidden" name="returnTo" value="manage-class"/>
             <input type="hidden" name="archive" value={detail.archivedAt ? "false" : "true"} />
             <ConfirmSubmitButton
+              title={detail.archivedAt ? "Restore class?" : "Archive class?"}
+              confirmLabel={detail.archivedAt ? "Restore class" : "Archive class"}
               confirmMessage={
                 detail.archivedAt
                   ? "Restore this class? It will be able to receive new enrollments again."
@@ -75,170 +144,27 @@ export default async function ClassDetailPage({
             </ConfirmSubmitButton>
           </form>
         </div>
+        {detail.students.length > 0 && <div className="class-enrollment-management">
+          <h2>Manage enrollment</h2>
+          <ul>{detail.students.map(student=><li key={student.studentId}>
+            <span>{student.fullName}</span>
+            <form action={removeStudentAction}>
+              <input type="hidden" name="classId" value={classId}/>
+              <input type="hidden" name="studentId" value={student.studentId}/>
+              <input type="hidden" name="returnTo" value="manage-class"/>
+              <ConfirmSubmitButton title="Remove student?" confirmLabel="Remove student" confirmMessage={`Remove ${student.fullName} from this class? Their past session results and scores are kept and remain visible to you - only the enrollment itself is removed.`} className="roster-remove">Remove</ConfirmSubmitButton>
+            </form>
+          </li>)}</ul>
+        </div>}
+        </details>
+      </ManageClassButton>
       </div>
-
-      <div className="mt-4 mb-6 flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-wide text-primary">Classes</div>
-          <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">{detail.name}</h1>
-          <p className="mt-1 text-[13px] text-ink-muted">
-            {detail.section ? `Section ${detail.section}` : "No section set"}
-            {formatAcademicPeriod(detail.academicYear, detail.semester) && (
-              <>
-                {" · "}
-                {formatAcademicPeriod(detail.academicYear, detail.semester)}
-              </>
-            )}
-          </p>
-        </div>
-        {detail.archivedAt && (
-          <span className="inline-flex items-center rounded-full bg-ink-subtle/10 px-3 py-1.5 text-[12px] font-semibold text-ink-subtle">
-            Archived {new Date(detail.archivedAt).toLocaleDateString()}
-          </span>
-        )}
       </div>
-
-      {error && (
-        <Card tint className="mb-6 border-critical/30">
-          <p className="text-[13px] text-critical" role="alert">
-            {error}
-          </p>
-        </Card>
-      )}
-      {successKey && (
-        <Card tint className="mb-6 border-good/30">
-          <p className="text-[13px] text-good" role="status">
-            {SUCCESS_MESSAGES[successKey]}
-          </p>
-        </Card>
-      )}
-
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Students" value={String(detail.students.length)} />
-        <StatTile label="Assignments" value={String(detail.assignments.length)} />
-        <StatTile label="Sessions" value={String(detail.sessionCount)} />
-        <StatTile label="Avg. verified score" value={detail.averageVerifiedScore !== null ? `${Math.round(detail.averageVerifiedScore * 100)}%` : "—"} />
-      </div>
-
-      {detail.sessionCount > 0 && (
-        <Link
-          href={`/class-results?classId=${encodeURIComponent(classId)}`}
-          className="mb-6 flex items-center gap-1.5 text-[12.5px] font-semibold text-primary hover:underline"
-        >
-          View this class&apos;s results and analytics →
-        </Link>
-      )}
-
-      <Card className="mb-6" padded={false}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <div className="text-[13px] font-semibold text-ink">Assignments ({detail.assignments.length})</div>
-          {!detail.archivedAt && (
-            <Link
-              href={`/assignments/new?classId=${encodeURIComponent(classId)}`}
-              className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
-            >
-              <Plus size={13} /> New assignment
-            </Link>
-          )}
-        </div>
-        {detail.assignments.length === 0 ? (
-          <p className="px-6 pb-5 text-[12.5px] text-ink-muted">No assignments yet.</p>
-        ) : (
-          <div className="flex flex-col">
-            {detail.assignments.map((a) => (
-              <Link
-                key={a.id}
-                href={`/assignments/${encodeURIComponent(a.id)}`}
-                className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3 transition-colors hover:bg-surface-tint"
-              >
-                <div>
-                  <div className="text-[12.5px] font-medium text-ink">{a.title || a.scenarioDisplayName}</div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-muted">
-                    {a.scenarioDisplayName} · {a.sessionCount} session{a.sessionCount === 1 ? "" : "s"}
-                    {a.averageVerifiedScore !== null ? ` · avg ${Math.round(a.averageVerifiedScore * 100)}%` : ""}
-                  </div>
-                </div>
-                <AssignmentStatusBadge status={a.status} />
-              </Link>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card className="mb-6">
-        <div className="mb-3 text-[13px] font-semibold text-ink">Enroll a student</div>
-        {detail.archivedAt ? (
-          <p className="text-[12.5px] text-ink-muted">This class is archived. Restore it to enroll new students.</p>
-        ) : (
-          <form action={enrollStudentAction} className="flex flex-wrap items-end gap-3">
-            <input type="hidden" name="classId" value={classId} />
-            <div className="flex flex-col gap-1">
-              <label htmlFor="studentNumber" className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Student number
-              </label>
-              <input
-                id="studentNumber"
-                name="studentNumber"
-                type="text"
-                required
-                maxLength={100}
-                placeholder="e.g. 2099-00001"
-                className="rounded-full border border-border bg-surface px-4 py-2 text-[12.5px] text-ink outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
-            </div>
-            <button
-              type="submit"
-              className="rounded-full bg-primary px-5 py-2.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-primary/90"
-            >
-              Enroll
-            </button>
-          </form>
-        )}
-        <p className="mt-2 text-[11.5px] text-ink-subtle">
-          Enrollment requires the student&apos;s exact student number, the same one shown on their results.
-        </p>
-      </Card>
-
-      <Card padded={false}>
-        <div className="px-6 pt-5 pb-3 text-[13px] font-semibold text-ink">Enrolled students ({detail.students.length})</div>
-        {detail.students.length === 0 ? (
-          <p className="px-6 pb-5 text-[12.5px] text-ink-muted">No students enrolled yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-[13px]">
-              <thead>
-                <tr className="border-y border-border text-left text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                  <th className="px-6 py-2">Name</th>
-                  <th className="px-6 py-2">Student number</th>
-                  <th className="px-6 py-2">Enrolled</th>
-                  <th className="px-6 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {detail.students.map((s) => (
-                  <tr key={s.studentId} className="border-b border-border last:border-b-0">
-                    <td className="px-6 py-3 font-medium text-ink">{s.fullName}</td>
-                    <td className="px-6 py-3 text-ink-muted">{s.studentNumber ?? "—"}</td>
-                    <td className="px-6 py-3 text-ink-muted">{new Date(s.enrolledAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-3 text-right">
-                      <form action={removeStudentAction}>
-                        <input type="hidden" name="classId" value={classId} />
-                        <input type="hidden" name="studentId" value={s.studentId} />
-                        <ConfirmSubmitButton
-                          confirmMessage={`Remove ${s.fullName} from this class? Their past session results and scores are kept and remain visible to you - only the enrollment itself is removed.`}
-                          className="text-[12px] font-semibold text-ink-muted transition-colors hover:text-critical"
-                        >
-                          Remove
-                        </ConfirmSubmitButton>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {error && manage!=="1" && (enroll!=="1"||detail.archivedAt) && <NotificationModal key={error} title="Action could not be completed" message={error} queryKeys={["error","enroll","studentNumber"]}/>}
+      {!error && successKey && <NotificationModal key={successKey} title="Class updated" message={SUCCESS_MESSAGES[successKey]} queryKeys={Object.keys(SUCCESS_MESSAGES)}/>}
+      <Section title="Students">
+        <ClassRoster classId={classId} students={detail.students}/>
+      </Section>
     </div>
   );
 }
@@ -248,14 +174,5 @@ function BackLink() {
     <Link href="/classes" className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink">
       <ArrowLeft size={14} /> Back to classes
     </Link>
-  );
-}
-
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <Card tint className="px-4 py-3.5">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">{label}</div>
-      <div className="mt-1 text-[20px] font-bold text-ink">{value}</div>
-    </Card>
   );
 }

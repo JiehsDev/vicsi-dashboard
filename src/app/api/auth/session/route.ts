@@ -9,7 +9,8 @@ async function sessionStatus(renew: boolean) {
   const lease = readDashboardSession(store.get(DASHBOARD_SESSION_COOKIE)?.value);
   const client = await createSupabaseServerClient();
   const user = lease ? (await client.auth.getUser()).data.user : null;
-  if (!lease || user?.id !== lease.userId || Date.now() >= dashboardSessionExpiresAt(lease)) {
+  const account=user?await client.rpc('is_account_suspended'):null;
+  if (!lease || user?.id !== lease.userId || account?.data===true || (account?.error&&account.error.code!=='PGRST202') || Date.now() >= dashboardSessionExpiresAt(lease)) {
     const response = NextResponse.json({ authenticated: false }, { status: 401 });
     for (const { name } of store.getAll()) {
       if (name === DASHBOARD_SESSION_COOKIE || isSupabaseAuthCookie(name)) {

@@ -79,6 +79,7 @@
                        "id":  "SampleDryingCompleted",
                        "description":  "Completed simulated drying of blood sample from {target}"
                    },
+                   { "id": "SampleDryingRetrieved", "description": "Retrieved the dried cotton swab collected from {target} (unscored)" },
                    {
                        "id":  "SamplePackaged",
                        "description":  "Packaged dried blood sample from {target} in paper"
@@ -87,6 +88,8 @@
                        "id":  "FingerprintPracticeCompleted",
                        "description":  "Completed optional fingerprint comparison practice for {target} (unscored)"
                    },
+                   { "id": "FingerprintLabSubmitted", "description": "Submitted the stored fingerprint lift from {target} for simulated lab examination (unscored)" },
+                   { "id": "FingerprintLabReportOpened", "description": "Read the simulated fingerprint lab report for {target} (unscored)" },
                    {
                        "id":  "SceneTurnoverCompleted",
                        "description":  "Completed First Responder turnover"

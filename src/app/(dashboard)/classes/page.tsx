@@ -1,8 +1,9 @@
 // src/app/(dashboard)/classes/page.tsx
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, ChevronRight } from "lucide-react";
 import { getInstructorClasses } from "@/lib/classes";
 import { Card } from "@/components/Card";
+import {formatAcademicPeriod} from "@/components/AcademicPeriodFields";
 
 export default async function ClassesPage({
   searchParams,
@@ -21,12 +22,12 @@ export default async function ClassesPage({
   const archived = filtered.filter((c) => c.archivedAt);
 
   return (
-    <div>
+    <div className="class-directory">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="text-[11px] font-bold uppercase tracking-wide text-primary">Classes</div>
           <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">Your classes</h1>
-          <p className="mt-1 text-[13px] text-ink-muted">Create and manage the classes you teach.</p>
+          <p className="mt-1 text-[13px] text-ink-muted">Open a class to see its enrolled students and review their investigation sessions.</p>
         </div>
         <Link
           href="/classes/new"
@@ -36,7 +37,7 @@ export default async function ClassesPage({
         </Link>
       </div>
 
-      <form className="mb-6 flex items-end gap-3" method="GET">
+      <form className="class-directory-search" method="GET">
         <div className="flex flex-col gap-1">
           <label htmlFor="q" className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
             Search classes
@@ -87,27 +88,17 @@ export default async function ClassesPage({
 function ClassList({ title, classes }: { title: string; classes: Awaited<ReturnType<typeof getInstructorClasses>> }) {
   if (classes.length === 0) return null;
   return (
-    <div>
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-muted">{title}</div>
-      <div className="flex flex-col gap-2">
+    <section className="class-directory-group" aria-label={`${title} classes`}>
+      <h2>{title} <span>{classes.length}</span></h2>
+      <ul className="class-directory-list">
         {classes.map((c) => (
-          <Link key={c.id} href={`/classes/${encodeURIComponent(c.id)}`}>
-            <Card className="transition-colors hover:border-primary/40" padded={false}>
-              <div className="flex items-center justify-between gap-3 px-5 py-3.5">
-                <div>
-                  <div className="text-[13.5px] font-medium text-ink">{c.name}</div>
-                  {c.section && <div className="mt-0.5 text-[12px] text-ink-muted">Section {c.section}</div>}
-                </div>
-                {c.archivedAt && (
-                  <span className="inline-flex items-center rounded-full bg-ink-subtle/10 px-2.5 py-1 text-[11.5px] font-semibold text-ink-subtle">
-                    Archived
-                  </span>
-                )}
-              </div>
-            </Card>
-          </Link>
+          <li key={c.id}><Link href={`/classes/${encodeURIComponent(c.id)}`}>
+            <div className="class-directory-name"><h3>{c.name}</h3><p>{c.section?`Section ${c.section}`:"No section set"}</p></div>
+            <span className="class-directory-period">{formatAcademicPeriod(c.academicYear,c.semester)||"Academic period not set"}</span>
+            <span className="class-directory-open">Open class <ChevronRight size={16} aria-hidden="true"/></span>
+          </Link></li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }

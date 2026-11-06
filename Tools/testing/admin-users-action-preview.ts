@@ -1,0 +1,3 @@
+export async function updateManagedUser(form:FormData){if(String(form.get('reason'))==='Backend failure')return {error:'The change could not be saved. Refresh and try again.'};document.documentElement.dataset.adminSaved=String(form.get('operation'));return {ok:true};}
+export async function manageSetupLink(form:FormData){document.documentElement.dataset.adminSaved=String(form.get('operation'));return {ok:true,token:'x'.repeat(43)};}
+export async function sendInstructorInvitation(){await new Promise(resolve=>setTimeout(resolve,100));document.documentElement.dataset.emailSent='true';return {ok:true,state:document.documentElement.dataset.emailResult??'sent'};}

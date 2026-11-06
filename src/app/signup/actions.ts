@@ -4,12 +4,11 @@
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { studentIdToEmail } from "@/lib/studentAuth";
-
-function fail(message: string): never {
-  redirect(`/signup?error=${encodeURIComponent(message)}`);
-}
+import {classJoinReturnPath} from "@/lib/classInvites";
 
 export async function signUp(formData: FormData) {
+  const next=classJoinReturnPath(formData.get("next"));
+  function fail(message:string):never {redirect(`/signup?error=${encodeURIComponent(message)}${next?`&next=${encodeURIComponent(next)}`:""}`);}
   const fullName = (formData.get("name") as string | null)?.trim() ?? "";
   const studentId = (formData.get("studentId") as string | null)?.trim() ?? "";
   const section = (formData.get("section") as string | null)?.trim().toUpperCase() ?? "";
@@ -79,5 +78,5 @@ export async function signUp(formData: FormData) {
     fail("Something went wrong creating your account. Please try again.");
   }
 
-  redirect("/login?created=1");
+  redirect(`/login?created=1${next?`&next=${encodeURIComponent(next)}`:""}`);
 }

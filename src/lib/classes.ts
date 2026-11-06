@@ -1,7 +1,6 @@
 // src/lib/classes.ts
 import "server-only";
 import { createSupabaseServerClient } from "./supabaseServer";
-import { getAssignmentsForClass, type AssignmentSummary } from "./assignments";
 
 /** RPCs in 015_instructor_class_management.sql and 016_class_assignment_
  *  management.sql (create_instructor_class_with_period/update_instructor_
@@ -112,10 +111,6 @@ export interface EnrolledStudent {
 
 export interface ClassDetail extends InstructorClass {
   students: EnrolledStudent[];
-  /** Full assignment rows (Part 5 - class detail shows scenario,
-   *  availability, active state, completion count, avg score per
-   *  assignment), not just a count. */
-  assignments: AssignmentSummary[];
   sessionCount: number;
   averageVerifiedScore: number | null;
 }
@@ -134,15 +129,16 @@ export async function getClassDetail(classId: string): Promise<ClassDetail | nul
 
   if (classError || !klass) return null;
 
-  const [{ data: enrollmentRows }, { data: sessionRows }, assignments] = await Promise.all([
+  const [{ data: enrollmentRows, error: enrollmentError }, { data: sessionRows }] = await Promise.all([
     supabase
       .from("class_enrollments")
       .select("student_id, enrolled_at, profiles(full_name, student_id)")
       .eq("class_id", classId)
       .order("enrolled_at", { ascending: false }),
     supabase.from("assessment_sessions").select("verification_status, verified_score").eq("class_id", classId),
-    getAssignmentsForClass(classId),
   ]);
+
+  if (enrollmentError) throw new Error("Unable to load this class's enrolled students. Please try again.");
 
   const students: EnrolledStudent[] = (enrollmentRows ?? []).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
@@ -167,7 +163,6 @@ export async function getClassDetail(classId: string): Promise<ClassDetail | nul
     archivedAt: klass.archived_at,
     createdAt: klass.created_at,
     students,
-    assignments,
     sessionCount: sessions.length,
     averageVerifiedScore: verified.length > 0 ? verified.reduce((sum, s) => sum + (s.verified_score as number), 0) / verified.length : null,
   };

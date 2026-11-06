@@ -79,7 +79,8 @@ export async function POST(request: Request) {
       STUDENT_NOT_PERMITTED: "This session's student is not set up for VR.",
       STUDENT_DISABLED: "VR access is disabled for this student.",
       SESSION_OWNER_MISMATCH: "This session is already recorded for a different student.",
-      NO_ASSIGNMENT: "The student has no assignment for this scenario yet.",
+      NO_CLASS_ENROLLMENT: "Ask the instructor to enroll this student in a class, then retry the upload.",
+      NO_ASSIGNMENT: "Server upload setup needs updating. Contact your instructor.",
     };
     return apiError(rpc.code, messages[rpc.code] ?? "Unable to authorize this upload.");
   }

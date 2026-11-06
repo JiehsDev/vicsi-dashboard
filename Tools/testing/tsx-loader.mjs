@@ -4,11 +4,18 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=path.resolve(fileURLToPath(new URL('../..',import.meta.url)));
 export async function resolve(specifier,context,next) {
+  if(process.env.VICSI_EMAIL_WEBHOOK_TESTS==='1'&&specifier==='@/lib/supabaseAdmin')return {url:new URL('./email-webhook-backend.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_DASHBOARD_FIXTURES==='1'&&specifier==='@/lib/adminUsers')return {url:new URL('./admin-users-fixture.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_ADMIN_GUARD_TESTS==='1'&&['./supabaseServer','@/lib/supabaseServer','next/cache'].includes(specifier))return {url:new URL('./admin-guard-backend.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_DASHBOARD_FIXTURES==='1'&&specifier==='@/lib/admin')return {url:new URL('./admin-fixture.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_DASHBOARD_FIXTURES==='1'&&['@/lib/classInvitesServer','@/lib/supabaseServer'].includes(specifier))return {url:new URL('./class-invites-fixture.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_CLASS_ACTION_TESTS==='1' && ['@/lib/supabaseServer','next/cache'].includes(specifier))return {url:new URL('./class-management-backend.ts',import.meta.url).href,shortCircuit:true};
   if(process.env.VICSI_SESSION_TESTS==='1' && ['@/lib/supabaseAdmin','@/lib/rateLimit','./supabaseServer','./supabaseAdmin','@/lib/supabaseClient'].includes(specifier))
     return {url:new URL('./session-api-fixture.ts',import.meta.url).href,shortCircuit:true};
   if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/results')return {url:new URL('./dashboard-fixture-backend.ts',import.meta.url).href,shortCircuit:true};
+  if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/classes')return {url:new URL('./class-overview-fixture.ts',import.meta.url).href,shortCircuit:true};
   if(process.env.VICSI_DASHBOARD_FIXTURES==='1' && specifier==='@/lib/supabaseClient')return {url:'data:text/javascript,export async function getMyProfile(){return globalThis.__vicsiProfile}',shortCircuit:true};
-  if(['next/link','next/navigation','next/headers','next/server'].includes(specifier))return next(specifier+'.js',context);
+  if(['next/link','next/navigation','next/headers','next/server','next/cache'].includes(specifier))return next(specifier+'.js',context);
   if(specifier==='server-only')return {url:'data:text/javascript,export{}',shortCircuit:true};
   if(specifier.startsWith('@/'))specifier=pathToFileURL(path.join(root,'src',specifier.slice(2))).href;
   if(specifier.startsWith('.') || specifier.startsWith('file:')) {

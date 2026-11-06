@@ -1,28 +1,26 @@
 // src/app/login/page.tsx
 import Link from "next/link";
-import { Fingerprint, Gamepad2 } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
+import { Gamepad2 } from "lucide-react";
 import { signIn } from "./actions";
+import {classJoinReturnPath} from "@/lib/classInvites";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; created?: string; expired?: string }>;
+  searchParams: Promise<{ error?: string; created?: string; expired?: string;next?:string }>;
 }) {
-  const { error, created, expired } = await searchParams;
+  const { error, created, expired,next:rawNext } = await searchParams;
+  const next=classJoinReturnPath(rawNext);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 lg:p-12">
       <div className="relative flex w-full max-w-[1040px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_20px_60px_-20px_rgba(24,24,21,0.20)] lg:min-h-[600px] lg:flex-row">
         {/* Brand panel */}
-        <div className="relative flex flex-col justify-between overflow-hidden border-b border-border bg-surface-tint px-9 py-10 lg:w-[42%] lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
+        <div className="relative flex flex-col justify-between overflow-hidden border-b border-border auth-brand-panel px-9 py-10 lg:w-[42%] lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
           <div className="relative">
-            <div className="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
-              <Fingerprint size={22} strokeWidth={1.75} />
-            </div>
-            <div className="text-[26px] font-bold leading-tight tracking-tight text-ink">
-              ViCSI
-            </div>
-            <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
+            <BrandLogo className="mb-6"/>
+            <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed auth-brand-description">
               VR-CSI Case Analytics — Partido State University, Lagonoy
               Campus, Criminology Department.
             </p>
@@ -62,6 +60,7 @@ export default async function LoginPage({
             )}
 
             <form action={signIn} className="flex flex-col gap-4">
+              {next&&<input type="hidden" name="next" value={next}/>}
               <label className="text-[12.5px] font-semibold text-ink">
                 Email or Student ID
                 <input
@@ -95,7 +94,7 @@ export default async function LoginPage({
             <div className="mt-6 text-center text-[13px] text-ink-muted">
               New student?{" "}
               <Link
-                href="/signup"
+                href={next?`/signup?next=${encodeURIComponent(next)}`:"/signup"}
                 className="font-semibold text-primary hover:underline"
               >
                 Create an account

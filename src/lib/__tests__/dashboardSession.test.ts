@@ -59,6 +59,28 @@ function request(path: string, cookie = "") {
   return new NextRequest(`https://dashboard.example${path}`, { headers: { cookie } });
 }
 
+test("signed-out class links preserve the safe join destination through login",async()=>{
+  const path=`/results/classes/join?invite=${"a".repeat(64)}`;
+  const response=await proxy(request(path));const login=new URL(response.headers.get("location")!);
+  assert.equal(login.pathname,"/login");assert.equal(login.searchParams.get("next"),path);
+  const invalid=await proxy(request("/results/classes/join?invite=invalid&next=https://evil.example"));
+  assert.equal(new URL(invalid.headers.get("location")!).searchParams.has("next"),false);
+});
+
+test("public logos load before sign-in while dashboard routes remain protected", async () => {
+  for (const cookie of ["", "sb-project-auth-token.0=stale"]) {
+    const response = await proxy(request("/brand/vicsi-logo.png?v=5.5", cookie));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("location"), null);
+    assert.equal(response.headers.get("set-cookie"), null);
+  }
+  for (const path of ["/classes", "/class-results", "/results", "/branding"]) {
+    const response = await proxy(request(path));
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "https://dashboard.example/login");
+  }
+});
+
 test("stale persistent login is rejected before Supabase refresh, removing all auth chunks", async () => {
   const response = await proxy(request("/results?student=private", "sb-project-auth-token.0=stale; sb-project-auth-token.1=stale; theme=dark"));
   assert.equal(response.status, 307);
@@ -114,9 +136,10 @@ test("valid auth and token refresh retain browser-session cookies on login redir
   const user = { id: lease.userId, aud: "authenticated", role: "authenticated", email: "demo@example.invalid",
     created_at: new Date(now).toISOString(), app_metadata: {}, user_metadata: {} };
   const token = (expiry: number) => `${Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url")}.${Buffer.from(JSON.stringify({ sub: user.id, exp: expiry })).toString("base64url")}.test-signature`;
-  let refreshes = 0;
+  let refreshes = 0,suspended=false;
   globalThis.fetch = async (input) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if(url.endsWith('/rpc/is_account_suspended'))return Response.json(suspended);
     if (url.includes("/token?grant_type=refresh_token")) {
       refreshes++;
       return Response.json({ access_token: token(Math.floor(now / 1000) + 3600), refresh_token: "refreshed-test-token",
@@ -143,6 +166,12 @@ test("valid auth and token refresh retain browser-session cookies on login redir
       assert.equal(response.cookies.has(DASHBOARD_SESSION_COOKIE), false);
     }
     assert.equal(refreshes, 1);
+    suspended=true;
+    const activeSession={access_token:token(Math.floor(now/1000)+3600),refresh_token:'test-refresh-token',expires_at:Math.floor(now/1000)+3600,user};
+    const auth=`base64-${Buffer.from(JSON.stringify(activeSession)).toString('base64url')}`;
+    const blocked=await proxy(request('/results',`${DASHBOARD_SESSION_COOKIE}=${encoded}; sb-dashboard-session-test-auth-token=${auth}`));
+    assert.equal(new URL(blocked.headers.get('location')!).pathname,'/login');
+    assert.ok(blocked.cookies.getAll().every(cookie=>cookie.maxAge===0));
   } finally {
     globalThis.fetch = originalFetch;
   }

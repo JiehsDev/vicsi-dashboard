@@ -13,12 +13,12 @@ import {mergeAssessmentEvents} from '../scoring/assessmentEventEnvelope.ts';
 import {scoreDeductionEvents,scoreDeductionAssessment} from '../scoring/deductionAssessmentScorer.ts';
 import type {ScoringSessionEvent} from '../scoring/types.ts';
 
-test('student and instructor can discover hidden test runs without losing their filters',()=>{
+test('students keep the hidden-test shortcut while instructors use the test filter without a banner',()=>{
  const row={...currentResult(),isTestSession:true};
  for(const instructor of [false,true]) {
   const hidden=renderToStaticMarkup(<ResultFilters rows={[row]} query={{dateFrom:'2026-10-01'}} instructor={instructor}/>);
-  assert.match(hidden,/1 test session is hidden/);assert.match(hidden,/Show test sessions/);
-  assert.ok(hidden.includes(`${instructor?'/class-results':'/results'}?dateFrom=2026-10-01&amp;includeTests=true`));
+  if(instructor){assert.doesNotMatch(hidden,/test session is hidden|Show test sessions/);assert.match(hidden,/Include test sessions/);assert.match(hidden,/value="2026-10-01"/);}
+  else {assert.match(hidden,/1 test session is hidden/);assert.match(hidden,/Show test sessions/);assert.ok(hidden.includes('/results?dateFrom=2026-10-01&amp;includeTests=true'));}
   const visible=renderToStaticMarkup(<ResultFilters rows={[row]} query={{includeTests:'true'}} instructor={instructor}/>);
   assert.doesNotMatch(visible,/test session is hidden|Show test sessions/);
  }
@@ -140,4 +140,36 @@ test('576 Unity fractional scores, penalties and contextual conclusions display 
    assert.equal(format(result.categories.finalConclusionComponent!),c.conclusion);assert.equal(format(result.totalScore!),c.total);
    assert.ok(Math.abs(result.totalScore!-c.result.totalScore)<.00002);
  }
+});
+
+
+test('lab submissions and report readings survive upload and remain unscored beside historical practice',()=>{
+ const base=eventsFor(currentInput());
+ const next=Math.max(0,...base.map(e=>e.sequenceNumber))+1;
+ const lab:ScoringSessionEvent[]=['FingerprintLabSubmitted','FingerprintLabReportOpened'].map((eventType,i)=>({
+   sequenceNumber:next+i,timestampMs:200000+i,eventType,targetId:'EVD-018',payload:[
+     {key:'workflow',value:'fingerprint-lab-reports-v1'},{key:'sourceSampleId',value:'fingerprint-sample:EVD-018'},{key:'scored',value:'false'}],
+ }));
+ const merged=mergeAssessmentEvents({scenarioId:'CSI-ENVIRONMENT-001',groundTruthVersion:'1.2.0',scoringRulesVersion:'1.7.0',orderedEvents:[...base,...lab]});
+ const rows=procedureTimeline(merged.orderedEvents as ScoringSessionEvent[]);
+ assert.ok(rows.some(row=>/Submitted.*simulated lab examination/.test(row.description)));
+ assert.ok(rows.some(row=>/Read the simulated fingerprint lab report/.test(row.description)));
+ const input=currentInput(), context={sessionId:'lab-test',scenarioId:'CSI-ENVIRONMENT-001',selectedConclusionId:input.selectedConclusionId,resolvedEndingId:input.resolvedEndingId};
+ assert.deepEqual(scoreDeductionEvents(merged.orderedEvents as ScoringSessionEvent[],context,'2026-11-02T00:00:00Z',rules),scoreDeductionEvents(base,context,'2026-11-02T00:00:00Z',rules));
+ const historical=procedureTimeline([{...lab[0],eventType:'FingerprintPracticeCompleted'}]);
+ assert.equal(historical.length,1);assert.match(historical[0].description,/comparison practice/);
+ assert.deepEqual((merged.orderedEvents as ScoringSessionEvent[]).filter(e=>e.eventType.startsWith('FingerprintLab')),lab);
+});
+
+
+test('dry-first swab timeline distinguishes retrieval and insertion while preserving historical paper packages',()=>{
+ const names=['SampleDryingStarted','SampleDryingCompleted','SampleDryingRetrieved','SamplePackaged'];
+ const events:ScoringSessionEvent[]=names.map((eventType,i)=>({sequenceNumber:i,timestampMs:i*1000,eventType,targetId:'EVD-014',payload:[{key:'workflow',value:'swab-dry-before-containment-v1'},{key:'scored',value:'false'}]}));
+ const rows=procedureTimeline(events);assert.equal(rows.length,3); // Completed milestones; the existing timeline omits drying starts.
+ assert.match(rows[1].description,/Retrieved the dried cotton swab/);
+ assert.match(rows[2].description,/into its evidence container/);
+ assert.doesNotMatch(rows[2].description,/paper/);
+ assert.match(procedureTimeline([{...events[3],payload:[]}])[0].description,/in paper/);
+ const merged=mergeAssessmentEvents({scoringRulesVersion:'1.7.0',orderedEvents:events});
+ assert.deepEqual(merged.orderedEvents,events);
 });

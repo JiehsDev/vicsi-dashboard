@@ -7,7 +7,7 @@ import { PinInput } from "@/components/PinInput";
 import { signUp } from "@/app/signup/actions";
 import { SECTIONS } from "@/lib/constants";
 
-export function SignupForm({ error }: { error?: string }) {
+export function SignupForm({ error,next }: { error?: string;next?:string }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pin, setPin] = useState("");
@@ -29,6 +29,7 @@ export function SignupForm({ error }: { error?: string }) {
 
   return (
     <form onSubmit={handleSubmit} action={signUp} className="flex flex-col gap-4" noValidate>
+      {next&&<input type="hidden" name="next" value={next}/>}
       {error && (
         <div className="rounded-xl border border-critical/20 bg-critical/10 px-4 py-3 text-[12.5px] text-critical">
           {error}

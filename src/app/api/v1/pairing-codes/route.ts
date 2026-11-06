@@ -29,6 +29,8 @@ export async function POST(request: Request) {
   if (authError || !user) {
     return apiError("UNAUTHORIZED", "Sign in to generate a pairing code.");
   }
+  const account=await supabase.rpc('is_account_suspended');
+  if(account.data===true||(account.error&&account.error.code!=='PGRST202'))return apiError('UNAUTHORIZED','Account access is unavailable. Contact your administrator.');
 
   const rateLimit = await checkRateLimit(
     `pairing-create:${user.id}`,

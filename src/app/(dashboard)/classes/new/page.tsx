@@ -1,3 +1,4 @@
+import { NotificationModal } from "@/components/NotificationModal";
 // src/app/(dashboard)/classes/new/page.tsx
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -13,7 +14,7 @@ export default async function NewClassPage({
   const { error, name, section, academicYear, semester } = await searchParams;
 
   return (
-    <div className="mx-auto max-w-[560px]">
+    <div className="class-editor">
       <Link href="/classes" className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink">
         <ArrowLeft size={14} /> Back to classes
       </Link>
@@ -23,13 +24,7 @@ export default async function NewClassPage({
         <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">New class</h1>
       </div>
 
-      {error && (
-        <Card tint className="mb-5 border-critical/30">
-          <p className="text-[13px] text-critical" role="alert">
-            {error}
-          </p>
-        </Card>
-      )}
+      {error && <NotificationModal key={error} title="Action could not be completed" message={error} queryKeys={["error"]}/>}
 
       <Card>
         <form action={createClassAction} className="flex flex-col gap-4">

@@ -1,38 +1,35 @@
 // src/app/signup/page.tsx
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { SignupForm } from "@/components/SignupForm";
+import {classJoinReturnPath} from "@/lib/classInvites";
 
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string;next?:string }>;
 }) {
-  const { error } = await searchParams;
+  const { error,next:rawNext } = await searchParams;
+  const next=classJoinReturnPath(rawNext);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 lg:p-12">
       <div className="relative flex w-full max-w-[1040px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_20px_60px_-20px_rgba(24,24,21,0.20)] lg:flex-row">
         {/* Brand panel */}
-        <div className="relative flex flex-col justify-between overflow-hidden border-b border-border bg-surface-tint px-9 py-10 lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
+        <div className="relative flex flex-col justify-between overflow-hidden border-b border-border auth-brand-panel px-9 py-10 lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
           <div className="relative">
-            <div className="mb-8 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
-              <GraduationCap size={22} strokeWidth={1.75} />
-            </div>
-            <div className="text-[26px] font-bold leading-tight tracking-tight text-ink">
-              ViCSI
-            </div>
-            <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed text-ink-muted">
+            <BrandLogo className="mb-6"/>
+            <p className="mt-3 max-w-[280px] text-[13.5px] leading-relaxed auth-brand-description">
               Create your student account to see your own evidence ID
               accuracy, procedural compliance, and scenario progress after
               every session.
             </p>
           </div>
 
-          <div className="relative mt-10 text-[12px] text-ink-muted">
+          <div className="relative mt-10 text-[12px] auth-brand-switcher">
             Already registered?{" "}
             <Link
-              href="/login"
+              href={next?`/login?next=${encodeURIComponent(next)}`:"/login"}
               className="font-semibold text-primary hover:underline"
             >
               Sign in instead
@@ -54,7 +51,7 @@ export default async function SignupPage({
               set up separately.
             </div>
 
-            <SignupForm error={error} />
+            <SignupForm error={error} next={next??undefined}/>
           </div>
         </div>
       </div>

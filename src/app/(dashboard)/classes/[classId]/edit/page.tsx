@@ -1,3 +1,4 @@
+import { NotificationModal } from "@/components/NotificationModal";
 // src/app/(dashboard)/classes/[classId]/edit/page.tsx
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -29,7 +30,7 @@ export default async function EditClassPage({
   }
 
   return (
-    <div className="mx-auto max-w-[560px]">
+    <div className="class-editor">
       <BackLink classId={classId} />
 
       <div className="mt-4 mb-6">
@@ -37,13 +38,7 @@ export default async function EditClassPage({
         <h1 className="mt-1 text-[24px] font-bold tracking-tight text-ink">Edit class</h1>
       </div>
 
-      {error && (
-        <Card tint className="mb-5 border-critical/30">
-          <p className="text-[13px] text-critical" role="alert">
-            {error}
-          </p>
-        </Card>
-      )}
+      {error && <NotificationModal key={error} title="Action could not be completed" message={error} queryKeys={["error"]}/>}
 
       <Card>
         <form action={updateClassAction} className="flex flex-col gap-4">
